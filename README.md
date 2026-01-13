@@ -68,8 +68,6 @@ streamlit run app.py
 
 This project follows an iterative engineering path, moving from basic scripts to a production-grade AI application.
 
-🗺️ Engineering Roadmap
-
 [x] Phase 1: NLP-Enhanced Matcher - Implemented NLTK pipeline for robust keyword matching.
 
 [ ] Phase 2: The Intelligence Layer - Integrating BERT/SBERT Transformers for Semantic Context.
