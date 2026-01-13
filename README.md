@@ -41,7 +41,7 @@ resume-analyzer/
 ├── app.py              # Main Streamlit Interface
 ├── requirements.txt    # Dependencies
 └── README.md           # Documentation
-
+```
 🚀 How to Run Locally
 1. Clone the Repository
 ```bash
