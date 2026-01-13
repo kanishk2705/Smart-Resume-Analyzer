@@ -45,7 +45,7 @@ resume-analyzer/
 🚀 How to Run Locally
 1. Clone the Repository
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/kanishk2705/Smart-Resume-Analyzer.git
 cd resume-analyzer
 ```
 2. Install Dependencies
