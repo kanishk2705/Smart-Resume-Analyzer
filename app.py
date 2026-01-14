@@ -7,69 +7,67 @@ from data.src.analyzer import analyze_resume
 # Page Config
 st.set_page_config(page_title="Smart Resume Analyzer", layout="wide")
 
-st.title("🚀 Smart Resume & Gap Analyzer")
-st.markdown("Upload your resume and paste the Job Description (JD) to see your match score and **missing keywords**.")
+st.title("🤖 Phase 2: AI-Powered Resume Analyzer")
+st.markdown("Now using **SBERT Transformers** for semantic understanding.")
 
-# Two-column layout
+# --- SIDEBAR (Optional but clean) ---
+with st.sidebar:
+    st.header("How it works")
+    st.info("1. **SBERT Model** reads the meaning of your resume.\n2. **Gap Analysis** finds missing keywords.\n3. **Hero Logic** highlights your best sentences.")
+
 col1, col2 = st.columns(2)
 
 with col1:
-    st.header("1. Upload Resume")
-    uploaded_file = st.file_uploader("Upload PDF or DOCX", type=["pdf", "docx"])
-    
-    resume_text = ""
-    if uploaded_file is not None:
-        try:
-            if uploaded_file.name.endswith(".pdf"):
-                resume_text = extract_text_from_pdf(uploaded_file)
-            elif uploaded_file.name.endswith(".docx"):
-                resume_text = extract_text_from_docx(uploaded_file)
-            
-            st.success("Resume uploaded successfully!")
-            with st.expander("Show Extracted Resume Text"):
-                st.write(resume_text[:500] + "...") # Show preview
-        except Exception as e:
-            st.error(f"Error reading file: {e}")
+    st.subheader("1. Upload Resume")
+    uploaded_file = st.file_uploader("Upload PDF/DOCX", type=["pdf", "docx"])
 
 with col2:
-    st.header("2. Job Description")
-    jd_input = st.text_area("Paste the JD here:", height=300)
+    st.subheader("2. Job Description")
+    jd_input = st.text_area("Paste JD here", height=200)
 
-# The "Action" Button
-if st.button("Analyze Match"):
-    if resume_text and jd_input:
-        
-        # 1. Clean Data
+if st.button("Analyze Match") and uploaded_file and jd_input:
+    
+    with st.spinner("Reading and encoding vectors..."):
+        # 1. Parse Text
+        if uploaded_file.name.endswith(".pdf"):
+            resume_text = extract_text_from_pdf(uploaded_file)
+        else:
+            resume_text = extract_text_from_docx(uploaded_file)
+            
+        # 2. Clean Text (We need both Raw and Clean now)
         clean_resume = clean_text(resume_text)
         clean_jd = clean_text(jd_input)
         
-        # 2. Analyze
-        results = analyze_resume(clean_resume, clean_jd)
+        # 3. Analyze
+        results = analyze_resume(resume_text, jd_input, clean_resume, clean_jd)
         
-        # 3. Display Results
+        # --- DISPLAY RESULTS ---
         st.divider()
-        st.subheader("📊 Analysis Results")
         
-        # Score Gauge
-        score = results['match_score']
-        if score > 75:
-            st.balloons()
-            st.success(f"**Match Score: {score}%** (Excellent)")
-        elif score > 50:
-            st.warning(f"**Match Score: {score}%** (Good, but needs work)")
-        else:
-            st.error(f"**Match Score: {score}%** (Low match)")
-            
-        # Missing Keywords (The "Pro" Value Add)
+        # Score Section
+        col_score, col_details = st.columns([1, 2])
+        
+        with col_score:
+            score = results['match_score']
+            st.metric("Match Confidence", f"{score}%")
+            if score > 75:
+                st.success("High Semantic Match!")
+            elif score > 50:
+                st.warning("Moderate Match")
+            else:
+                st.error("Low Match")
+                
+        with col_details:
+            st.subheader("✨ Hero Sentences")
+            st.caption("These lines from your resume contributed most to your score:")
+            for sentence, score in results['top_sentences']:
+                st.info(f"**({int(score*100)}%)** ...{sentence}...")
+
+        # Missing Keywords Section
+        st.divider()
         st.subheader("⚠️ Missing Keywords")
-        st.write("These words appear in the JD but are missing from your resume:")
-        
-        missing = results['missing_keywords']
-        if missing:
-            # Display as tags
-            st.write(", ".join([f"`{word}`" for word in missing]))
+        if results['missing_keywords']:
+            st.write("Consider adding these exact terms:")
+            st.write(", ".join([f"`{w}`" for w in results['missing_keywords']]))
         else:
-            st.info("No major keywords missing!")
-            
-    else:
-        st.warning("Please upload a resume and provide a JD.")
+            st.success("No critical keywords missing!")

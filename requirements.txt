@@ -3,3 +3,5 @@ PyPDF2
 scikit-learn
 pandas
 nltk
+sentence-transformers
+torch --index-url https://download.pytorch.org/whl/cpu
