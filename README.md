@@ -4,12 +4,20 @@
 > *A resume analysis tool that uses Natural Language Processing (NLTK) to clean, lemmatize, and match resumes against Job Descriptions.*
 
 ![Smart Resume Analyzer Demo](assets/phase_1_demo.png)
+
 # 🤖 Smart Resume Analyzer (Phase 2: AI-Powered)
 
-> **Current Status:** Phase 2 (Semantic Search & Explainability) ✅  
+> Phase 2 (Semantic Search & Explainability) ✅  
 > *A Next-Gen ATS Simulator that uses Deep Learning (SBERT Transformers) to understand the **meaning** of a resume, not just keywords.*
 
 ![Phase 2 Analysis Demo](assets/phase_2_demo.png)
+
+# 🐳 Smart Resume Analyzer (Phase 3: Dockerized)
+
+> **Current Status:** Phase 3 (Containerized Microservice) ✅  
+> *A Production-Ready ATS Simulator. Containerized with Docker for "Run Anywhere" deployment, featuring Semantic Search and AI-Powered Explainability.*
+
+![Phase 3](assets/phase_3_demo.png)
 
 ## 📌 Project Overview
 Most ATS (Applicant Tracking Systems) reject qualified candidates because they lack specific keywords.
@@ -18,19 +26,20 @@ Unlike basic keyword matchers that fail on simple word variations (e.g., "Analyz
 
 In **Phase 2**, we upgraded from simple keyword matching to **Semantic Understanding**. By integrating **BERT-based Transformers**, this tool now understands that *"Building Dashboards"* is semantically similar to *"Data Visualization"*, identifying qualified candidates even if they don't use the exact phrasing of the Job Description (JD).
 
+The **Phase 3**,project is an **Engineering-Grade ATS Simulator** that evolves beyond simple scripts. It uses **Deep Learning (Transformers)** to understand the semantic meaning of a resume and is deployed as a **Dockerized Microservice**, ensuring it runs consistently on any machine (Local, AWS, Azure, etc.).
+
 ## 🛠️ Tech Stack
-* **Python 3.10+**
-* **Sentence-Transformers (SBERT):** Uses `all-MiniLM-L6-v2` to convert text into high-dimensional vector embeddings.
-* **PyTorch:** The backend engine driving the Transformer model.
-* **NLTK:** For sentence segmentation and text preprocessing.
-* **Streamlit:** Interactive UI.
-* **Scikit-Learn:** For supplementary keyword gap analysis.
+* **Deployment:** Docker & Docker Compose (Containerization).
+* **Intelligence:** Sentence-Transformers (SBERT) & PyTorch (CPU-Optimized).
+* **NLP Pipeline:** NLTK for text preprocessing and Lemmatization.
+* **Frontend:** Streamlit.
+* **Core Logic:** Hybrid Search (Cosine Similarity + Keyword Gap Analysis).
 
 ## ✨ Key Features
-* **🧠 Semantic Scoring:** Uses Deep Learning to calculate a match score based on *context* and *meaning*, rather than just word counts.
-* **🔦 Hero Sentence Logic:** Automatically highlights the specific lines in your resume that contributed most to your score (Explainability).
-* **📉 Gap Analysis:** Still tracks missing hard skills (keywords) to ensure you pass strict ATS filters.
-* **⚡ Hybrid Architecture:** Combines Semantic Search (for the score) with Keyword Search (for the feedback).
+* **🐳 Portable & Scalable:** Fully containerized. No "it works on my machine" issues—just pull the image and run.
+* **🧠 Semantic Scoring:** Uses `all-MiniLM-L6-v2` to understand that "React" and "Frontend Development" are related.
+* **⚡ Instant Startup:** Uses **Docker Layer Caching** to pre-bake heavy AI models (80MB+) into the image, so the app launches instantly.
+* **🔍 Explainability:** Highlights the "Hero Sentences" that contributed most to your match score.
 
 ## 📂 Project Structure
 ```text
