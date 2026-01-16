@@ -1,20 +1,17 @@
-# 🚀 Smart Resume Analyzer
-
-> Phase 1 (NLP Keyword Matching) ✅  
+# 🚀 Phase 1 (NLP Keyword Matching) ✅
+  
 > *A resume analysis tool that uses Natural Language Processing (NLTK) to clean, lemmatize, and match resumes against Job Descriptions.*
 
 ![Smart Resume Analyzer Demo](assets/phase_1_demo.png)
 
-# 🤖 Smart Resume Analyzer (Phase 2: AI-Powered)
+# 🤖 Phase 2 (Semantic Search & Explainability) ✅
 
-> Phase 2 (Semantic Search & Explainability) ✅  
 > *A Next-Gen ATS Simulator that uses Deep Learning (SBERT Transformers) to understand the **meaning** of a resume, not just keywords.*
 
 ![Phase 2 Analysis Demo](assets/phase_2_demo.png)
 
-# 🐳 Smart Resume Analyzer (Phase 3: Dockerized)
-
-> **Current Status:** Phase 3 (Containerized Microservice) ✅  
+# 🐳 **Current Status:** Phase 3 (Containerized Microservice) ✅
+  
 > *A Production-Ready ATS Simulator. Containerized with Docker for "Run Anywhere" deployment, featuring Semantic Search and AI-Powered Explainability.*
 
 ![Phase 3](assets/phase_3_demo.png)
@@ -71,9 +68,7 @@ streamlit run app.py
 4. Usage
 ```bash
     . Upload your Resume (PDF or DOCX).
-
     . Paste the Job Description.
-
     . Click "Analyze" to see your score and missing keywords.
 ```
 🗺️ Engineering Roadmap
@@ -84,7 +79,7 @@ This project follows an iterative engineering path, moving from basic scripts to
 
 [x] Phase 2: The Intelligence Layer - Integrating BERT/SBERT Transformers for Semantic Context.
 
-[ ] Phase 3: DevOps & Scalability - Dockerizing the application for portable deployment.
+[x] Phase 3: DevOps & Scalability - Dockerizing the application for portable deployment.
 
 [ ] Phase 4: GenAI Mentor - Using LLMs (Gemini) to generate custom learning paths.
 
