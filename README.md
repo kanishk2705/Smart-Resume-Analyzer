@@ -23,7 +23,7 @@ Unlike basic keyword matchers that fail on simple word variations (e.g., "Analyz
 
 In **Phase 2**, we upgraded from simple keyword matching to **Semantic Understanding**. By integrating **BERT-based Transformers**, this tool now understands that *"Building Dashboards"* is semantically similar to *"Data Visualization"*, identifying qualified candidates even if they don't use the exact phrasing of the Job Description (JD).
 
-The **Phase 3**,project is an **Engineering-Grade ATS Simulator** that evolves beyond simple scripts. It uses **Deep Learning (Transformers)** to understand the semantic meaning of a resume and is deployed as a **Dockerized Microservice**, ensuring it runs consistently on any machine (Local, AWS, Azure, etc.).
+The **Phase 3**, project is an **Engineering-Grade ATS Simulator** that evolves beyond simple scripts. It uses **Deep Learning (Transformers)** to understand the semantic meaning of a resume and is deployed as a **Dockerized Microservice**, ensuring it runs consistently on any machine (Local, AWS, Azure, etc.).
 
 ## 🛠️ Tech Stack
 * **Deployment:** Docker & Docker Compose (Containerization).
@@ -46,11 +46,28 @@ resume-analyzer/
 │   ├── parser.py       # Handles PDF/DOCX extraction
 │   ├── cleaner.py      # NLTK Pipeline (Lemmatization & Cleaning)
 │   └── analyzer.py     # Core logic (Cosine Similarity)
-│
+|── Dockerfile          # Container instructions (Multi-layer build)
+├── .dockerignore       # Build context optimization
 ├── app.py              # Main Streamlit Interface
 ├── requirements.txt    # Dependencies
 └── README.md           # Documentation
 ```
+🚀 How to Run (The "Pro" Way)
+Since this is Dockerized, you don't need to install Python or libraries manually.
+
+Option 1: Run with Docker (Recommended)
+1. Build the Image
+```
+docker build -t resume-analyzer .
+```
+Note: The build process automatically downloads the AI models, so they are "baked in" to the container.
+
+2. Run the Container
+```
+docker run -p 8501:8501 resume-analyzer
+```
+3. Access App Open your browser to ``` http://localhost:8501 ```
+
 🚀 How to Run Locally
 1. Clone the Repository
 ```bash
