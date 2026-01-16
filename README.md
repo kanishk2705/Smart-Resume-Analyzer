@@ -69,7 +69,7 @@ docker run -p 8501:8501 resume-analyzer
 ```
 3. Access App Open your browser to ``` http://localhost:8501 ```
 
-🚀 How to Run Locally
+🚀 Option 2: Run Locally
 1. Clone the Repository
 ```bash
 git clone https://github.com/kanishk2705/Smart-Resume-Analyzer.git
