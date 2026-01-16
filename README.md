@@ -1,4 +1,4 @@
-# 🚀 Smart Resume Analyzer (Phase 1: NLP-Enhanced)
+# 🚀 Smart Resume Analyzer
 
 > Phase 1 (NLP Keyword Matching) ✅  
 > *A resume analysis tool that uses Natural Language Processing (NLTK) to clean, lemmatize, and match resumes against Job Descriptions.*
