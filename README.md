@@ -52,8 +52,9 @@ resume-analyzer/
 ├── requirements.txt    # Dependencies
 └── README.md           # Documentation
 ```
-🚀 How to Run (The "Pro" Way)
-Since this is Dockerized, you don't need to install Python or libraries manually.
+🚀 How to Run
+
+--> Since this is Dockerized, you don't need to install Python or libraries manually.
 
 Option 1: Run with Docker (Recommended)
 1. Build the Image
