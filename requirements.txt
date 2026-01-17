@@ -6,3 +6,4 @@ python-docx
 nltk
 sentence-transformers
 torch --index-url https://download.pytorch.org/whl/cpu
+requests
