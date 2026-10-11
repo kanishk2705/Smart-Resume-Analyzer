@@ -1,125 +1,269 @@
-# 🚀 Smart Resume Analyzer (AI-Powered ATS)
+# Smart Resume Analyzer
 
-# 🚀 Phase 1 (NLP Keyword Matching) ✅
-  
-> *A resume analysis tool that uses Natural Language Processing (NLTK) to clean, lemmatize, and match resumes against Job Descriptions.*
+[![CI](https://github.com/kanishk2705/Smart-Resume-Analyzer/actions/workflows/ci.yml/badge.svg)](https://github.com/kanishk2705/Smart-Resume-Analyzer/actions/workflows/ci.yml)
 
-![Smart Resume Analyzer Demo](assets/phase_1_demo.png)
+Scores a resume against a job description, explains the score requirement by requirement,
+shows which skills are matched or missing, and uses an LLM to suggest how to close the gaps.
 
-# 🤖 Phase 2 (Semantic Search & Explainability) ✅
+![The analysis view: overall score, score breakdown and skills by category](assets/demo.png)
 
-> *A Next-Gen ATS Simulator that uses Deep Learning (SBERT Transformers) to understand the **meaning** of a resume, not just keywords.*
+## Why
 
-![Phase 2 Analysis Demo](assets/phase_2_demo.png)
+Keyword-based applicant tracking systems reject candidates over wording: a resume that says
+"built dashboards" can miss a job description asking for "data visualization". This project
+compares the two documents by meaning as well as by keyword.
 
-# 🐳 Phase 3 (Containerized Microservice) ✅
-  
-> *A Production-Ready ATS Simulator. Containerized with Docker for "Run Anywhere" deployment, featuring Semantic Search and AI-Powered Explainability.*
+## Features
 
-![Phase 3](assets/phase_3_demo.png)
+- **Score breakdown** — an overall match score built from four components (skills,
+  requirement coverage, experience relevance, education), each shown with its own score,
+  weight and a one-line explanation.
+- **Skill gap by category** — every skill the job asks for is marked matched, related
+  (the resume has a substitute, e.g. MySQL for PostgreSQL) or missing.
+- **Requirement coverage** — each sentence of the job description is paired with the resume
+  sentence that supports it best, and rated strong, partial or weak.
+- **Section-aware parsing** — the resume is split into Experience, Education, Skills,
+  Projects and other sections, including resumes laid out as Word tables.
+- **ATS format check** — ten checks on the resume itself: contact details that exist only
+  as hyperlinks, icons that extract as junk, missing standard sections, length,
+  unquantified or passive bullet points, and first-person pronouns.
+- **Recruiter mode** — upload up to 25 resumes and rank them against one job description,
+  with a CSV export. An unreadable file is reported and skipped, not fatal to the batch.
+- **History** — every analysis is saved to SQLite, with the change in score since the
+  previous analysis for the same job, so you can see whether an edit helped.
+- **PDF report** — any analysis can be downloaded as a formatted report.
+- **AI coach** — an LLM (served by Groq) suggests a learning resource and a project idea
+  for each missing skill, and rewrites the statements the ATS check flagged. It is told
+  never to invent facts, and leaves `[placeholders]` where a real figure belongs.
+- **REST API** — everything the UI does is available over HTTP, with interactive docs.
 
-#  Phase 4 (LLM Integration) ✅  
+## How scoring works
 
-> *An End-to-End MLOps project that analyzes resumes using Deep Learning (SBERT) and generates personalized upskilling plans using Google Gemini 2.0.*
+The resume and the job description are both split into sentence-sized units (one per
+bullet point or sentence). Each unit is embedded with SBERT (`all-MiniLM-L6-v2`), and every
+resume unit is compared with every job description unit by cosine similarity. Embedding
+units, not whole documents, means the entire resume is read; the model itself only reads
+256 tokens at a time.
 
-![Project Demo](assets/phase_4_demo.png)
+| Component            | Weight | How it is computed                                                                                   |
+| -------------------- | ------ | ---------------------------------------------------------------------------------------------------- |
+| Skills match         | 40%    | Share of the job's skills found in the resume. A related skill earns half credit.                    |
+| Requirement coverage | 30%    | For each job requirement, the best-matching resume unit; averaged over all requirements.             |
+| Experience relevance | 20%    | The five Experience / Projects statements that best match the job; averaged.                         |
+| Education            | 10%    | 100 if the resume's highest degree meets the job's minimum, 50 if one level short, otherwise 0.      |
 
-## 📌 The Problem
-Traditional Applicant Tracking Systems (ATS) are broken. They reject qualified candidates because of simple keyword mismatches (e.g., rejecting "ML Ops" when looking for "DevOps"). 
+The overall score is the weighted mean. A component that cannot be assessed (for example,
+the job states no degree requirement) is left out and the remaining weights are
+renormalised, so it is not counted as zero.
 
-## 📌 Project Overview
+Skills come from a hand-curated taxonomy of about 190 skills in
+[core/data/skills.json](core/data/skills.json). Each entry lists its spellings, and matching
+respects symbols and case, so `C++`, `C#`, `CI/CD` and `S3` are recognised and "excellent"
+is not read as Excel.
 
-Most ATS (Applicant Tracking Systems) reject qualified candidates because they lack specific keywords.
+Raw cosine similarities are stretched onto 0–100 between a floor (0.15) and a ceiling
+(0.70), because unrelated sentences rarely score 0 and paraphrases rarely score 1.
 
-Unlike basic keyword matchers that fail on simple word variations (e.g., "Analyze" vs. "Analysis"), this **Phase 1** implementation integrates an **NLP Pipeline** to normalize text before matching. It identifies the gap between a candidate's resume and the job requirements using mathematical vectorization.
+## Architecture
 
-In **Phase 2**, we upgraded from simple keyword matching to **Semantic Understanding**. By integrating **BERT-based Transformers**, this tool now understands that *"Building Dashboards"* is semantically similar to *"Data Visualization"*, identifying qualified candidates even if they don't use the exact phrasing of the Job Description (JD).
-
-The **Phase 3**, project is an **Engineering-Grade ATS Simulator** that evolves beyond simple scripts. It uses **Deep Learning (Transformers)** to understand the semantic meaning of a resume and is deployed as a **Dockerized Microservice**, ensuring it runs consistently on any machine (Local, AWS, Azure, etc.).
-
-**Phase 4**: Introduced a GenAI-powered feature that identifies candidates’ top three skill gaps and provides relevant online learning resources, going beyond keyword matching and hero sentence suggestions.
-
-## 🛠️ Tech Stack
-* **Core:** Python 3.10, PyTorch (CPU-Optimized).
-* **AI Models:** `sentence-transformers` (SBERT), Google Gemini 2.0 Flash.
-* **Infrastructure:** Docker & Docker Compose (Microservice).
-* **Frontend:** Streamlit (Optimized with Session State & WebSocket fixes).
-* **Resilience:** Custom "No-Library" API Client to handle model versioning and quota management.
-
-## ✨ Key Features
-
-I built an **AI-First ATS** that focuses on *context*, not just keywords.
-
-1.  **Semantic Matching:** Uses **SBERT Transformers** to understand that "Dashboarding" == "Data Visualization".
-2.  **Explainable AI:** Highlights "Hero Sentences" so users know exactly what scored points.
-3.  **🐳 Portable & Scalable:** Fully containerized. No "it works on my machine" issues—just pull the image and run.
-4.  **⚡ Instant Startup:** Uses **Docker Layer Caching** to pre-bake heavy AI models (80MB+) into the image, so the app launches instantly.
-5.  **GenAI Career Coach:** Instead of just saying "You lack SQL", it uses **Gemini 2.0 Flash** to generate a specific **Google Search Link** for the best course and a practical **Project Idea** to fill that gap.
-
-## 📂 Project Structure
 ```text
-resume-analyzer/
-│
-├── src/
-│   ├── parser.py       # Handles PDF/DOCX extraction
-│   ├── cleaner.py      # NLTK Pipeline (Lemmatization & Cleaning)
-│   └── analyzer.py     # Core logic (Cosine Similarity)
-|   └──recommendations.py # Gemini API Integration
-|── Dockerfile          # Container instructions (Multi-layer build)
-├── .dockerignore       # Build context optimization
-├── app.py              # Main Streamlit Interface
-├── requirements.txt    # Dependencies
-└── README.md           # Documentation
+┌──────────────────┐   HTTP    ┌────────────────────┐   HTTPS   ┌────────────┐
+│ Streamlit UI     │ ────────▶ │ FastAPI backend    │ ────────▶ │ Groq API   │
+│ frontend/ :8501  │           │ backend/     :8000 │           └────────────┘
+└──────────────────┘           │   └─ core/         │
+                               │      parsing       │
+                               │      sections      │
+                               │      skills        │
+                               │      scoring       │
+                               └────────────────────┘
 ```
-## 🚀 How to Run (Docker)
-The app is fully containerized. You don't need to install Python or PyTorch.
 
-1.  **Build the Image**
-    ```bash
-    docker build -t resume-analyzer .
-    ```
+The frontend holds no ML code and talks to the backend only over HTTP. `core/` has no web
+framework code, so it can be tested and reused on its own.
 
-2.  **Run with API Key**
-    *Replace `YOUR_KEY` with your Google Gemini API Key.*
-    ```bash
-    # Windows PowerShell
-    $key = "YOUR_KEY"
-    docker run -p 8501:8501 -e GEMINI_API_KEY="$key" resume-analyzer
-    ```
+```text
+├── core/                  # Analysis logic, independent of any web framework
+│   ├── config.py          # Settings from environment variables / .env
+│   ├── parsing.py         # PDF and DOCX text extraction
+│   ├── sections.py        # Splits resumes and job descriptions at section headings
+│   ├── text.py            # Splits text into sentence-sized units
+│   ├── skills.py          # Skill extraction against the taxonomy
+│   ├── education.py       # Degree level detection
+│   ├── scoring.py         # Score components and explanations
+│   ├── ats.py             # Format checks on the resume itself
+│   ├── report.py          # PDF report
+│   ├── data/skills.json   # Skill taxonomy
+│   ├── llm.py             # Groq client with model fallback
+│   └── coaching.py        # Learning path and statement rewrites
+├── backend/               # FastAPI service
+│   ├── main.py            # Routes and error handling
+│   ├── storage.py         # Analysis history (SQLite)
+│   ├── schemas.py         # Request / response models
+│   └── Dockerfile
+├── frontend/              # Streamlit client
+│   ├── app.py
+│   ├── api_client.py
+│   └── Dockerfile
+├── tests/                 # pytest suite
+├── requirements/          # Pinned dependencies (backend, frontend, dev)
+├── docker-compose.yml
+└── .github/workflows/     # CI: lint + tests on every push
+```
 
-3. Access App Open your browser to ``` http://localhost:8501 ```
+## Run with Docker
 
-🚀 Option 2: Run Locally
-
-1. Clone the Repository
 ```bash
-git clone https://github.com/kanishk2705/Smart-Resume-Analyzer.git
-cd resume-analyzer
+docker compose up --build
 ```
-2. Install Dependencies
+
+Then open <http://localhost:8501>. The API docs are at <http://localhost:8000/docs>.
+
+The first build downloads PyTorch and the embedding model, so it takes a few minutes.
+
+To enable the AI coach, copy `.env.example` to `.env` and set `GROQ_API_KEY` before
+starting. Without a key everything else works and the coach tab says it is off.
+
+## Run locally
+
+Requires Python 3.11 or newer.
+
 ```bash
 pip install -r requirements.txt
+
+# Terminal 1: backend
+uvicorn backend.main:app --reload
+
+# Terminal 2: frontend
+streamlit run frontend/app.py
 ```
-3. Run the Application
+
+The frontend looks for the backend at `http://localhost:8000`. Set the `BACKEND_URL`
+environment variable to point it elsewhere.
+
+## API
+
+| Method | Path                          | Description                                          |
+| ------ | ----------------------------- | ---------------------------------------------------- |
+| GET    | `/health`                     | Service status and configuration                     |
+| POST   | `/api/v1/analyze`             | Score one resume against a JD and save the result    |
+| POST   | `/api/v1/rank`                | Rank several resumes against one JD (not saved)      |
+| GET    | `/api/v1/history`             | Summaries of past analyses, newest first             |
+| GET    | `/api/v1/history/{id}`        | One past analysis in full                            |
+| GET    | `/api/v1/history/{id}/report` | That analysis as a PDF                               |
+| DELETE | `/api/v1/history/{id}`        | Delete a past analysis                               |
+| POST   | `/api/v1/coach/learning-path` | Learning resources and projects for missing skills   |
+| POST   | `/api/v1/coach/rewrite`       | Stronger wordings for resume statements              |
+
 ```bash
-streamlit run app.py
+curl -X POST http://localhost:8000/api/v1/analyze \
+  -F "resume=@resume.pdf" \
+  -F "job_description=We are hiring a data analyst skilled in SQL and Python."
 ```
-4. Usage
+
+```json
+{
+  "match_score": 64.11,
+  "components": [
+    {"key": "skills", "label": "Skills match", "score": 63.64, "weight": 0.4,
+     "detail": "6 of 11 required skills found, 2 more covered by a related skill."}
+  ],
+  "skills": [
+    {"name": "Python", "category": "Programming Languages", "status": "matched", "related_to": null},
+    {"name": "PostgreSQL", "category": "Databases", "status": "related", "related_to": "MySQL"},
+    {"name": "Airflow", "category": "Data Engineering & BI", "status": "missing", "related_to": null}
+  ],
+  "additional_skills": ["R", "Pandas", "Git"],
+  "requirements": [
+    {"requirement": "Build and maintain dashboards that track key business metrics.",
+     "evidence": "Built interactive dashboards in Tableau and Power BI used by 40 store managers.",
+     "similarity": 0.57, "status": "strong"}
+  ],
+  "top_sentences": [
+    {"text": "Built interactive dashboards in Tableau and Power BI used by 40 store managers.", "score": 0.57}
+  ],
+  "sections_found": ["summary", "experience", "projects", "education", "skills"],
+  "ats": {
+    "score": 70.0,
+    "checks": [
+      {"key": "email", "label": "Email address", "status": "warn",
+       "message": "Email address exists only as a hyperlink, not as visible text. ...",
+       "examples": []}
+    ]
+  }
+}
+```
+
+The response above is shortened; the full schema is in the interactive docs.
+
+## Configuration
+
+All settings are optional and read from environment variables or a `.env` file.
+
+| Variable          | Default                      | Purpose                                      |
+| ----------------- | ---------------------------- | -------------------------------------------- |
+| `GROQ_API_KEY`    | *(empty)*                    | Enables the AI coach                         |
+| `GROQ_MODELS`     | see `.env.example`           | Models to try, in order                      |
+| `EMBEDDING_MODEL` | `all-MiniLM-L6-v2`           | Sentence-transformers model used for scoring |
+| `MAX_UPLOAD_MB`   | `5`                          | Largest accepted resume file                 |
+| `MAX_BATCH_FILES` | `25`                         | Most resumes ranked in one request           |
+| `HISTORY_DB`      | `data/history.db`            | SQLite file holding past analyses            |
+| `LOG_LEVEL`       | `INFO`                       | Backend log verbosity                        |
+| `BACKEND_URL`     | `http://localhost:8000`      | Where the frontend finds the API             |
+
+Component weights and similarity thresholds can be changed the same way; see
+[core/config.py](core/config.py) for the full list.
+
+## Development
+
 ```bash
-    . Upload your Resume (PDF or DOCX).
-    . Paste the Job Description.
-    . Click "Analyze" to see your score and missing keywords.
+pip install -r requirements/dev.txt
+
+ruff check .              # lint
+pytest -m "not slow"      # fast tests, no model download
+pytest                    # all tests, including one that loads the real model
 ```
-🗺️ Engineering Roadmap
 
-This project follows an iterative engineering path, moving from basic scripts to a production-grade AI application.
+## Known limitations
 
-[x] Phase 1: NLP-Enhanced Matcher - Implemented NLTK pipeline for robust keyword matching.
+- **The score is not validated against hiring outcomes.** The component weights, the
+  similarity floor and ceiling, and the strong / partial thresholds were chosen by
+  inspecting a handful of examples, not fitted to labelled data. Treat the score as a
+  relative guide, not a probability of getting an interview.
+- **The skill taxonomy is hand-curated and tech-focused.** A skill that is not in
+  `skills.json` is invisible to the skills component, and "related" skills are limited to
+  the substitute groups defined there.
+- **Single-letter languages are matched conservatively.** `C`, `R` and `Go` only count
+  when they appear in a delimited list such as "Python, R, Go", not in running prose.
+- **Section detection depends on conventional headings.** A resume with unusual headings
+  is scored as one block, and its experience component is reported as not assessed.
+- **Every sentence of the job description counts as a requirement**, apart from sections
+  headed "About us", "Benefits" and similar. Boilerplate elsewhere lowers coverage.
+- **Education is judged on degree level only**, not field of study or institution.
+- **ATS checks are rules of thumb.** They flag common problems; they do not reproduce the
+  behaviour of any particular applicant tracking system.
+- **There are no user accounts.** Anyone who can reach the app sees the whole history.
+  The history holds analysis results (including sentences quoted from resumes), not the
+  uploaded files. Run it locally or behind your own access control.
+- **The AI coach sends text to a third party.** Using it sends the job title, the missing
+  skill names and the flagged resume statements to Groq. Nothing is sent otherwise.
+  Its rewrites are suggestions and can still be wrong; check them before using them.
+- Multi-column PDF layouts can be extracted out of reading order, and scanned
+  (image-only) PDFs are not supported.
+- English only.
 
-[x] Phase 2: The Intelligence Layer - Integrating BERT/SBERT Transformers for Semantic Context.
+## Roadmap
 
-[x] Phase 3: DevOps & Scalability - Dockerizing the application for portable deployment.
+- [ ] Evaluate the score against labelled resume–job pairs and fit the weights to data
+- [ ] Hosted demo
+- [ ] User accounts, so the history is private to each user
 
-[x] Phase 4: GenAI Mentor - Using LLMs (Gemini) to generate custom learning paths.
+## Project history
 
-``` Built by A C KANISHK as part of an end-to-end Machine Learning Engineering study. ```
+Version 1 was a single Streamlit script built in four phases: NLTK keyword matching, a
+whole-document SBERT similarity score, a Docker image, and LLM learning paths. Version 2
+rebuilt it as the service described above; the keyword matcher was replaced by the skill
+taxonomy and the single similarity score by the four-component breakdown.
+
+---
+
+Built by A C Kanishk.

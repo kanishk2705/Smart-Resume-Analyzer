@@ -1,13 +1,15 @@
-# Ignore local virtual environments
-venv/
-env/
+.git
+.github
+.venv
+venv
 .env
-
-# Ignore git history
-.git/
-.gitignore
-
-# Ignore python cache
-__pycache__/
+__pycache__
 *.pyc
-.DS_Store
+.pytest_cache
+.ruff_cache
+.vscode
+.idea
+assets
+tests
+data
+README.md

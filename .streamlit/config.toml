@@ -1,0 +1,9 @@
+[server]
+# Matches the backend's MAX_UPLOAD_MB, so the uploader shows the real limit
+maxUploadSize = 5
+
+[client]
+toolbarMode = "minimal"
+
+[browser]
+gatherUsageStats = false
