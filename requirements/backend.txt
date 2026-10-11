@@ -17,3 +17,6 @@ sentence-transformers==5.2.0
 transformers==4.57.5
 # For a CPU-only build, install torch first from https://download.pytorch.org/whl/cpu
 torch==2.10.0
+
+# PDF report
+fpdf2==2.8.9

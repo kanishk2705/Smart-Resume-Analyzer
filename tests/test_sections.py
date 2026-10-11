@@ -44,6 +44,12 @@ def test_recognises_letter_spaced_and_ampersand_headings():
     assert [s.name for s in split_sections(text)] == ["education", "skills"]
 
 
+def test_recognises_combined_headings():
+    text = "Professional Summary\nStudent.\nCertifications & Achievements\nSQL Certificate"
+
+    assert [s.name for s in split_sections(text)] == ["summary", "certifications"]
+
+
 def test_a_sentence_containing_a_heading_word_is_not_a_heading():
     text = "Experience\nI have experience in education technology and skills training."
 

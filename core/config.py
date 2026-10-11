@@ -32,6 +32,10 @@ class Settings(BaseSettings):
 
     # Uploads
     max_upload_mb: int = 5
+    max_batch_files: int = 25
+
+    # SQLite file holding past analyses
+    history_db: str = "data/history.db"
 
     # Gemini (recommendations)
     gemini_api_key: str = ""

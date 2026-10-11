@@ -8,6 +8,7 @@ os.environ["GEMINI_API_KEY"] = ""
 import numpy as np
 import pytest
 from docx import Document
+from docx.opc.constants import RELATIONSHIP_TYPE
 from fastapi.testclient import TestClient
 
 from backend.main import app
@@ -28,10 +29,14 @@ class FakeEncoder:
         return vectors / np.where(norms == 0, 1, norms)
 
 
-def make_docx(*paragraphs: str, table: list[list[str]] | None = None) -> bytes:
+def make_docx(
+    *paragraphs: str, table: list[list[str]] | None = None, link: str | None = None
+) -> bytes:
     doc = Document()
     for paragraph in paragraphs:
         doc.add_paragraph(paragraph)
+    if link:
+        doc.part.relate_to(link, RELATIONSHIP_TYPE.HYPERLINK, is_external=True)
     if table:
         doc_table = doc.add_table(rows=len(table), cols=len(table[0]))
         for row, values in zip(doc_table.rows, table, strict=True):
@@ -42,17 +47,22 @@ def make_docx(*paragraphs: str, table: list[list[str]] | None = None) -> bytes:
     return buffer.getvalue()
 
 
-def make_pdf(text: str) -> bytes:
-    """Builds a minimal single-page PDF containing one line of text."""
+def make_pdf(text: str, link: str | None = None) -> bytes:
+    """Builds a minimal single-page PDF containing one line of text and, optionally, a link."""
     stream = f"BT /F1 12 Tf 72 720 Td ({text}) Tj ET".encode()
     objects = [
         b"<< /Type /Catalog /Pages 2 0 R >>",
         b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
         b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R "
-        b"/Resources << /Font << /F1 5 0 R >> >> >>",
+        b"/Resources << /Font << /F1 5 0 R >> >> /Annots [%s] >>" % (b"6 0 R" if link else b""),
         b"<< /Length %d >>\nstream\n%s\nendstream" % (len(stream), stream),
         b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
     ]
+    if link:
+        objects.append(
+            b"<< /Type /Annot /Subtype /Link /Rect [72 710 200 730] "
+            b"/A << /S /URI /URI (%s) >> >>" % link.encode()
+        )
 
     pdf = b"%PDF-1.4\n"
     offsets = []
@@ -77,7 +87,9 @@ def analyzer() -> ResumeAnalyzer:
 
 
 @pytest.fixture
-def client(analyzer):
+def client(analyzer, tmp_path, monkeypatch):
+    # Each test gets its own empty history database
+    monkeypatch.setenv("HISTORY_DB", str(tmp_path / "history.db"))
     get_settings.cache_clear()
     app.dependency_overrides[get_analyzer] = lambda: analyzer
     with TestClient(app) as test_client:

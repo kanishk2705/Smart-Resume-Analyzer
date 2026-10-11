@@ -24,6 +24,14 @@ compares the two documents by meaning as well as by keyword.
   sentence that supports it best, and rated strong, partial or weak.
 - **Section-aware parsing** — the resume is split into Experience, Education, Skills,
   Projects and other sections, including resumes laid out as Word tables.
+- **ATS format check** — ten checks on the resume itself: contact details that exist only
+  as hyperlinks, icons that extract as junk, missing standard sections, length,
+  unquantified or passive bullet points, and first-person pronouns.
+- **Recruiter mode** — upload up to 25 resumes and rank them against one job description,
+  with a CSV export. An unreadable file is reported and skipped, not fatal to the batch.
+- **History** — every analysis is saved to SQLite, with the change in score since the
+  previous analysis for the same job, so you can see whether an edit helped.
+- **PDF report** — any analysis can be downloaded as a formatted report.
 - **AI learning path** — Google Gemini suggests a learning resource and a project idea for
   the top missing skills.
 - **REST API** — everything the UI does is available over HTTP, with interactive docs.
@@ -81,10 +89,13 @@ framework code, so it can be tested and reused on its own.
 │   ├── skills.py          # Skill extraction against the taxonomy
 │   ├── education.py       # Degree level detection
 │   ├── scoring.py         # Score components and explanations
+│   ├── ats.py             # Format checks on the resume itself
+│   ├── report.py          # PDF report
 │   ├── data/skills.json   # Skill taxonomy
 │   └── recommendations.py # Gemini client with model fallback
 ├── backend/               # FastAPI service
 │   ├── main.py            # Routes and error handling
+│   ├── storage.py         # Analysis history (SQLite)
 │   ├── schemas.py         # Request / response models
 │   └── Dockerfile
 ├── frontend/              # Streamlit client
@@ -129,11 +140,16 @@ environment variable to point it elsewhere.
 
 ## API
 
-| Method | Path                      | Description                                           |
-| ------ | ------------------------- | ----------------------------------------------------- |
-| GET    | `/health`                 | Service status and configuration                      |
-| POST   | `/api/v1/analyze`         | Score a resume (multipart upload) against a JD        |
-| POST   | `/api/v1/recommendations` | Learning resources and projects for missing skills    |
+| Method | Path                          | Description                                          |
+| ------ | ----------------------------- | ---------------------------------------------------- |
+| GET    | `/health`                     | Service status and configuration                     |
+| POST   | `/api/v1/analyze`             | Score one resume against a JD and save the result    |
+| POST   | `/api/v1/rank`                | Rank several resumes against one JD (not saved)      |
+| GET    | `/api/v1/history`             | Summaries of past analyses, newest first             |
+| GET    | `/api/v1/history/{id}`        | One past analysis in full                            |
+| GET    | `/api/v1/history/{id}/report` | That analysis as a PDF                               |
+| DELETE | `/api/v1/history/{id}`        | Delete a past analysis                               |
+| POST   | `/api/v1/recommendations`     | Learning resources and projects for missing skills   |
 
 ```bash
 curl -X POST http://localhost:8000/api/v1/analyze \
@@ -162,7 +178,15 @@ curl -X POST http://localhost:8000/api/v1/analyze \
   "top_sentences": [
     {"text": "Built interactive dashboards in Tableau and Power BI used by 40 store managers.", "score": 0.57}
   ],
-  "sections_found": ["summary", "experience", "projects", "education", "skills"]
+  "sections_found": ["summary", "experience", "projects", "education", "skills"],
+  "ats": {
+    "score": 70.0,
+    "checks": [
+      {"key": "email", "label": "Email address", "status": "warn",
+       "message": "Email address exists only as a hyperlink, not as visible text. ...",
+       "examples": []}
+    ]
+  }
 }
 ```
 
@@ -178,6 +202,8 @@ All settings are optional and read from environment variables or a `.env` file.
 | `GEMINI_MODELS`   | see `.env.example`           | Models to try, in order                      |
 | `EMBEDDING_MODEL` | `all-MiniLM-L6-v2`           | Sentence-transformers model used for scoring |
 | `MAX_UPLOAD_MB`   | `5`                          | Largest accepted resume file                 |
+| `MAX_BATCH_FILES` | `25`                         | Most resumes ranked in one request           |
+| `HISTORY_DB`      | `data/history.db`            | SQLite file holding past analyses            |
 | `LOG_LEVEL`       | `INFO`                       | Backend log verbosity                        |
 | `BACKEND_URL`     | `http://localhost:8000`      | Where the frontend finds the API             |
 
@@ -210,6 +236,11 @@ pytest                    # all tests, including one that loads the real model
 - **Every sentence of the job description counts as a requirement**, apart from sections
   headed "About us", "Benefits" and similar. Boilerplate elsewhere lowers coverage.
 - **Education is judged on degree level only**, not field of study or institution.
+- **ATS checks are rules of thumb.** They flag common problems; they do not reproduce the
+  behaviour of any particular applicant tracking system.
+- **There are no user accounts.** Anyone who can reach the app sees the whole history.
+  The history holds analysis results (including sentences quoted from resumes), not the
+  uploaded files. Run it locally or behind your own access control.
 - Multi-column PDF layouts can be extracted out of reading order, and scanned
   (image-only) PDFs are not supported.
 - English only.
@@ -223,7 +254,9 @@ pytest                    # all tests, including one that loads the real model
 - [x] v2, step 1: FastAPI backend, separate frontend, tests, CI, pinned dependencies
 - [x] v2, step 2: Section-aware parsing, sentence-level scoring, score breakdown, skill
       taxonomy (replaces the Phase 1 keyword matcher)
-- [ ] v2, step 3: Recruiter mode, ATS format checker, analysis history, PDF report
+- [x] v2, step 3: Recruiter mode, ATS format checker, analysis history, PDF report
+- [ ] Evaluate the score against labelled resume–job pairs and fit the weights to data
+- [ ] Hosted demo
 
 Earlier phases: [1](assets/phase_1_demo.png) · [2](assets/phase_2_demo.png) ·
 [3](assets/phase_3_demo.png) · [4](assets/phase_4_demo.png)

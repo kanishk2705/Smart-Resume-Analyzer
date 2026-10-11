@@ -9,14 +9,14 @@ class BackendError(Exception):
     """The backend was unreachable or rejected the request. The message is safe to show users."""
 
 
-def _request(method: str, path: str, timeout: float, **kwargs) -> dict:
+def _request(method: str, path: str, timeout: float, **kwargs) -> requests.Response:
     try:
         response = requests.request(method, f"{BACKEND_URL}{path}", timeout=timeout, **kwargs)
     except requests.RequestException as e:
         raise BackendError(f"Could not reach the backend at {BACKEND_URL}.") from e
 
     if response.ok:
-        return response.json()
+        return response
 
     try:
         detail = response.json().get("detail")
@@ -28,7 +28,7 @@ def _request(method: str, path: str, timeout: float, **kwargs) -> dict:
 
 
 def get_health() -> dict:
-    return _request("GET", "/health", timeout=3)
+    return _request("GET", "/health", timeout=3).json()
 
 
 def analyze(filename: str, content: bytes, job_description: str) -> dict:
@@ -38,16 +38,42 @@ def analyze(filename: str, content: bytes, job_description: str) -> dict:
         timeout=120,
         files={"resume": (filename, content)},
         data={"job_description": job_description},
-    )
+    ).json()
+
+
+def rank(resumes: list[tuple[str, bytes]], job_description: str) -> dict:
+    """Ranks (filename, content) pairs against one job description."""
+    return _request(
+        "POST",
+        "/api/v1/rank",
+        timeout=600,
+        files=[("resumes", resume) for resume in resumes],
+        data={"job_description": job_description},
+    ).json()
+
+
+def get_history() -> list[dict]:
+    return _request("GET", "/api/v1/history", timeout=10).json()["analyses"]
+
+
+def get_analysis(analysis_id: int) -> dict:
+    return _request("GET", f"/api/v1/history/{analysis_id}", timeout=10).json()
+
+
+def delete_analysis(analysis_id: int) -> None:
+    _request("DELETE", f"/api/v1/history/{analysis_id}", timeout=10)
+
+
+def get_report(analysis_id: int) -> bytes:
+    return _request("GET", f"/api/v1/history/{analysis_id}/report", timeout=30).content
 
 
 def get_recommendations(missing_skills: list[str], api_key: str | None = None) -> list[dict]:
     headers = {"X-Gemini-Api-Key": api_key} if api_key else {}
-    body = _request(
+    return _request(
         "POST",
         "/api/v1/recommendations",
         timeout=120,
         json={"missing_skills": missing_skills},
         headers=headers,
-    )
-    return body["recommendations"]
+    ).json()["recommendations"]

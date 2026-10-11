@@ -30,9 +30,12 @@ def split_sentences(text: str) -> list[str]:
     return nltk.sent_tokenize(text)
 
 
-def _split_blocks(text: str) -> list[str]:
-    """Groups lines into bullets / paragraphs, re-joining lines that were wrapped."""
-    blocks: list[str] = []
+def _split_blocks(text: str) -> list[tuple[str, bool]]:
+    """Groups lines into bullets / paragraphs, re-joining lines that were wrapped.
+
+    Returns each block with whether it began with a bullet marker.
+    """
+    blocks: list[tuple[str, bool]] = []
     previous = ""  # the line before this one; empty after a blank line
     for raw_line in text.splitlines():
         line = raw_line.strip()
@@ -50,11 +53,16 @@ def _split_blocks(text: str) -> list[str]:
         )
         continues = previous and not is_bullet and (line[0].islower() or previous_was_wrapped)
         if blocks and continues:
-            blocks[-1] += " " + line
+            blocks[-1] = (blocks[-1][0] + " " + line, blocks[-1][1])
         else:
-            blocks.append(line)
+            blocks.append((line, is_bullet))
         previous = line
     return blocks
+
+
+def bullet_points(text: str) -> list[str]:
+    """The bullet points in a document, without their markers."""
+    return [block for block, is_bullet in _split_blocks(text) if is_bullet]
 
 
 def split_units(text: str, max_words: int = 120) -> list[str]:
@@ -64,7 +72,7 @@ def split_units(text: str, max_words: int = 120) -> list[str]:
     exceeds what the embedding model can read.
     """
     units = []
-    for block in _split_blocks(text):
+    for block, _ in _split_blocks(text):
         # A short block is one bullet point. Splitting it further would only break on
         # abbreviations ("B.Sc. in Statistics"), so only paragraphs are split.
         is_paragraph = len(block.split()) > PARAGRAPH_WORDS

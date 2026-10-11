@@ -9,6 +9,9 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
     ports:
       - "8000:8000"
+    volumes:
+      # Keeps the analysis history across container rebuilds
+      - history:/app/data
 
   frontend:
     build:
@@ -21,3 +24,6 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+
+volumes:
+  history:

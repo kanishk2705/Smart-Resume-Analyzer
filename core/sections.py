@@ -29,7 +29,8 @@ RESUME_HEADINGS = {
     ],
     "certifications": [
         "certifications", "certificates", "licenses and certifications", "courses",
-        "certifications and courses", "training", "coursework", "relevant coursework",
+        "certifications and courses", "certifications and achievements",
+        "certifications and awards", "training", "coursework", "relevant coursework",
     ],
     "other": [
         "awards", "achievements", "honors", "honors and awards", "awards and achievements",

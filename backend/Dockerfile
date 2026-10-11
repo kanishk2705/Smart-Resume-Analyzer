@@ -21,7 +21,8 @@ RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTr
 COPY core/ core/
 COPY backend/ backend/
 
-RUN useradd --create-home appuser && chown -R appuser /opt/models
+# /app/data holds the analysis history; docker-compose mounts a volume there
+RUN useradd --create-home appuser && mkdir data && chown -R appuser /opt/models data
 USER appuser
 
 EXPOSE 8000

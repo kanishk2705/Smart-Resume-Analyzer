@@ -38,7 +38,33 @@ class RequirementMatch(BaseModel):
     status: Literal["strong", "partial", "weak"]
 
 
+class AtsCheck(BaseModel):
+    key: str
+    label: str
+    status: Literal["pass", "warn", "fail"]
+    message: str
+    examples: list[str] = Field(description="Resume statements the finding applies to")
+
+
+class AtsReport(BaseModel):
+    score: float = Field(description="0-100: a pass earns full credit, a warning half")
+    checks: list[AtsCheck]
+
+
+class AnalysisSummary(BaseModel):
+    id: int
+    created_at: str = Field(description="UTC, ISO 8601")
+    resume_filename: str
+    job_title: str = Field(description="Taken from the first line of the job description")
+    match_score: float = Field(description="Weighted mean of the assessed components, 0-100")
+    ats_score: float
+
+
 class AnalysisResponse(BaseModel):
+    id: int
+    created_at: str = Field(description="UTC, ISO 8601")
+    resume_filename: str
+    job_title: str = Field(description="Taken from the first line of the job description")
     match_score: float = Field(description="Weighted mean of the assessed components, 0-100")
     components: list[ScoreComponent]
     skills: list[SkillMatch] = Field(description="Every skill the job description asks for")
@@ -46,6 +72,32 @@ class AnalysisResponse(BaseModel):
     requirements: list[RequirementMatch]
     top_sentences: list[ScoredSentence]
     sections_found: list[str]
+    ats: AtsReport = Field(description="Format checks, independent of the job description")
+
+
+class HistoryResponse(BaseModel):
+    analyses: list[AnalysisSummary]
+
+
+class RankedCandidate(BaseModel):
+    rank: int
+    filename: str
+    match_score: float
+    components: list[ScoreComponent]
+    matched_skills: list[str]
+    related_skills: list[str]
+    missing_skills: list[str]
+
+
+class FailedResume(BaseModel):
+    filename: str
+    error: str
+
+
+class RankingResponse(BaseModel):
+    job_title: str
+    candidates: list[RankedCandidate] = Field(description="Best match first")
+    failed: list[FailedResume] = Field(description="Files that could not be read")
 
 
 class RecommendationRequest(BaseModel):
