@@ -14,7 +14,21 @@ class Settings(BaseSettings):
     embedding_model: str = "all-MiniLM-L6-v2"
     preload_model: bool = True
     top_k_sentences: int = 3
-    max_missing_keywords: int = 10
+    # Longest sentence sent to the model in one piece; all-MiniLM-L6-v2 reads 256 tokens
+    max_unit_words: int = 120
+    top_experience_units: int = 5
+
+    # Share of the overall score each component carries
+    weight_skills: float = 0.40
+    weight_coverage: float = 0.30
+    weight_experience: float = 0.20
+    weight_education: float = 0.10
+
+    # Cosine similarities at or below the floor score 0, at or above the ceiling score 100
+    similarity_floor: float = 0.15
+    similarity_ceiling: float = 0.70
+    strong_match_threshold: float = 0.50
+    partial_match_threshold: float = 0.35
 
     # Uploads
     max_upload_mb: int = 5

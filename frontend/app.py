@@ -3,6 +3,11 @@ import streamlit as st
 import api_client
 from api_client import BackendError
 
+STATUS_ICONS = {
+    "matched": "✅", "related": "🟡", "missing": "❌",
+    "strong": "🟢", "partial": "🟡", "weak": "🔴",
+}
+
 st.set_page_config(page_title="Smart Resume Analyzer", layout="wide")
 st.title("🤖 Smart Resume Analyzer")
 
@@ -50,36 +55,85 @@ if st.session_state.analysis_results:
 
     # Score Section
     score = results["match_score"]
-    col_score, col_hero = st.columns([1, 2])
+    col_score, col_breakdown = st.columns([1, 2])
 
     with col_score:
-        st.metric("Match Confidence", f"{score}%")
+        st.metric("Overall Match", f"{score:.0f}%")
         if score >= 75:
             st.success("✅ High Match")
         elif score >= 50:
             st.warning("⚠️ Moderate Match")
         else:
             st.error("❌ Low Match")
+        if results["sections_found"]:
+            st.caption("Sections detected: " + ", ".join(results["sections_found"]))
+        else:
+            st.caption("No section headings detected; the resume was scored as one block.")
+
+    # Score Breakdown
+    with col_breakdown:
+        st.subheader("📊 Score Breakdown")
+        for component in results["components"]:
+            share = f"{component['weight']:.0%} of score"
+            if component["score"] is None:
+                st.markdown(f"**{component['label']}** — not assessed ({share})")
+            else:
+                st.markdown(f"**{component['label']}** — {component['score']:.0f}% ({share})")
+                st.progress(component["score"] / 100)
+            st.caption(component["detail"])
+
+    # Skills
+    st.divider()
+    st.subheader("🧩 Skills")
+    skills = results["skills"]
+    missing_skills = [s["name"] for s in skills if s["status"] == "missing"]
+    if skills:
+        categories = list(dict.fromkeys(s["category"] for s in skills))
+        for category in categories:
+            chips = []
+            for skill in (s for s in skills if s["category"] == category):
+                chip = f"{STATUS_ICONS[skill['status']]} `{skill['name']}`"
+                if skill["related_to"]:
+                    chip += f" (you have {skill['related_to']})"
+                chips.append(chip)
+            st.markdown(f"**{category}:** " + " · ".join(chips))
+        st.caption("✅ found in resume · 🟡 a related skill was found · ❌ missing")
+    else:
+        st.info("No known skills were found in the job description.")
+    if results["additional_skills"]:
+        with st.expander("Other skills on your resume that this job did not ask for"):
+            st.write(", ".join(f"`{name}`" for name in results["additional_skills"]))
+
+    # Requirement Coverage
+    st.divider()
+    st.subheader("🔍 Requirement Coverage")
+    st.caption("Each job requirement, with the resume sentence that supports it best.")
+    st.dataframe(
+        [
+            {
+                "Match": STATUS_ICONS[r["status"]] + " " + r["status"].title(),
+                "Job requirement": r["requirement"],
+                "Best evidence in resume": r["evidence"],
+                "Similarity": round(r["similarity"], 2),
+            }
+            for r in results["requirements"]
+        ],
+        hide_index=True,
+        width="stretch",
+    )
 
     # Hero Sentences
-    with col_hero:
-        st.subheader("✨ Hero Sentences")
-        if results["top_sentences"]:
-            for sentence in results["top_sentences"]:
-                st.info(f"**({int(sentence['score'] * 100)}%)** ...{sentence['text']}...")
-        else:
-            st.info("No strong sentences found.")
+    st.subheader("✨ Hero Sentences")
+    if results["top_sentences"]:
+        for sentence in results["top_sentences"]:
+            st.info(f"**({int(sentence['score'] * 100)}%)** {sentence['text']}")
+    else:
+        st.info("No strong sentences found.")
 
-    # Missing Keywords
+    # --- GEN AI SECTION ---
     st.divider()
-    st.subheader("⚠️ Missing Keywords")
-    if results["missing_keywords"]:
-        st.write(", ".join([f"`{w}`" for w in results["missing_keywords"]]))
-
-        # --- GEN AI SECTION ---
-        st.divider()
-        st.subheader("🎓 AI Personal Growth Plan")
-
+    st.subheader("🎓 AI Personal Growth Plan")
+    if missing_skills:
         # API Key Logic (configured on the backend, or entered here)
         api_key = None
         if not gemini_configured:
@@ -93,7 +147,7 @@ if st.session_state.analysis_results:
                 status_msg.info("⏳ Consulting AI Coach... Please wait.")
 
                 try:
-                    recs = api_client.get_recommendations(results["missing_keywords"], api_key)
+                    recs = api_client.get_recommendations(missing_skills, api_key)
                 except BackendError as e:
                     recs = None
                     st.error(str(e))
@@ -111,4 +165,4 @@ if st.session_state.analysis_results:
                 elif recs is not None:
                     st.warning("No recommendations returned.")
     else:
-        st.success("No missing keywords found.")
+        st.success("No missing skills to plan for.")

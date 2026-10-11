@@ -33,15 +33,38 @@ def test_health(client):
     [("resume.docx", make_docx(RESUME)), ("resume.pdf", make_pdf(RESUME))],
     ids=["docx", "pdf"],
 )
-def test_analyze_returns_score_keywords_and_sentences(client, filename, content):
+def test_analyze_returns_score_breakdown_and_explanations(client, filename, content):
     response = post_analyze(client, filename, content)
 
     assert response.status_code == 200
     body = response.json()
     assert 0 < body["match_score"] <= 100
-    assert "kubernetes" in body["missing_keywords"]
+    assert [c["key"] for c in body["components"]] == [
+        "skills",
+        "coverage",
+        "experience",
+        "education",
+    ]
+    assert {s["name"]: s["status"] for s in body["skills"]} == {
+        "Python": "matched",
+        "SQL": "matched",
+        "Docker": "matched",
+        "Kubernetes": "missing",
+    }
+    assert body["requirements"][0]["evidence"] == RESUME
     assert body["top_sentences"][0]["text"] == RESUME
-    assert body["top_sentences"][0]["score"] == pytest.approx(1.0)
+    assert body["sections_found"] == []
+
+
+def test_analyze_reports_sections_and_table_content_from_docx(client):
+    content = make_docx(
+        "Experience", RESUME, "Education", "B.Sc. in Statistics", table=[["Skills"], ["Kubernetes"]]
+    )
+
+    body = post_analyze(client, "resume.docx", content).json()
+
+    assert body["sections_found"] == ["experience", "education", "skills"]
+    assert {s["name"]: s["status"] for s in body["skills"]}["Kubernetes"] == "matched"
 
 
 def test_analyze_rejects_unsupported_file_type(client):

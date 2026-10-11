@@ -15,7 +15,7 @@ COPY requirements/backend.txt requirements/backend.txt
 RUN pip install --no-cache-dir -r requirements/backend.txt
 
 # Cache Warming (pre-download NLTK data and the embedding model into the image)
-RUN python -c "import nltk; [nltk.download(p, download_dir='/opt/models/nltk_data') for p in ('punkt_tab', 'stopwords', 'wordnet', 'omw-1.4')]"
+RUN python -c "import nltk; nltk.download('punkt_tab', download_dir='/opt/models/nltk_data')"
 RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
 
 COPY core/ core/

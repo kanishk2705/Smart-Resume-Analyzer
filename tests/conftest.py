@@ -14,7 +14,7 @@ from backend.main import app
 from core.config import get_settings
 from core.scoring import ResumeAnalyzer, get_analyzer
 
-VOCABULARY = ["python", "sql", "docker", "dashboard", "marketing", "sales"]
+VOCABULARY = ["python", "sql", "docker", "kubernetes", "dashboard", "marketing", "sales"]
 
 
 class FakeEncoder:
@@ -28,10 +28,15 @@ class FakeEncoder:
         return vectors / np.where(norms == 0, 1, norms)
 
 
-def make_docx(*paragraphs: str) -> bytes:
+def make_docx(*paragraphs: str, table: list[list[str]] | None = None) -> bytes:
     doc = Document()
     for paragraph in paragraphs:
         doc.add_paragraph(paragraph)
+    if table:
+        doc_table = doc.add_table(rows=len(table), cols=len(table[0]))
+        for row, values in zip(doc_table.rows, table, strict=True):
+            for cell, value in zip(row.cells, values, strict=True):
+                cell.text = value
     buffer = io.BytesIO()
     doc.save(buffer)
     return buffer.getvalue()

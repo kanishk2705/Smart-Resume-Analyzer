@@ -4,6 +4,7 @@ from typing import BinaryIO
 
 import pypdf
 from docx import Document
+from docx.table import Table
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +31,20 @@ def extract_text_from_pdf(file: BinaryIO) -> str:
 def extract_text_from_docx(file: BinaryIO) -> str:
     """Extracts text from a DOCX file object."""
     doc = Document(file)
-    return "\n".join(para.text for para in doc.paragraphs)
+    lines = []
+    # Paragraphs and tables in document order; many resume templates are laid out as tables
+    for block in doc.iter_inner_content():
+        if isinstance(block, Table):
+            seen = set()
+            for row in block.rows:
+                for cell in row.cells:
+                    # A merged cell is reported once per column it spans
+                    if cell._tc not in seen:
+                        seen.add(cell._tc)
+                        lines.append(cell.text)
+        else:
+            lines.append(block.text)
+    return "\n".join(lines)
 
 
 def extract_text(file: BinaryIO, filename: str) -> str:
