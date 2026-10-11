@@ -3,7 +3,8 @@ import os
 
 # Must be set before the app is imported, so tests never load the real model at startup
 os.environ["PRELOAD_MODEL"] = "false"
-os.environ["GEMINI_API_KEY"] = ""
+# An empty value overrides any real key in a local .env, so tests never call the live API
+os.environ["GROQ_API_KEY"] = ""
 
 import numpy as np
 import pytest

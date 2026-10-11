@@ -2,7 +2,7 @@ import pytest
 
 from backend import main
 from core.config import get_settings
-from core.recommendations import RecommendationError
+from core.llm import LLMError
 from tests.conftest import make_docx, make_pdf
 
 JD = "We need Python, SQL and Docker experience. Kubernetes is a plus."
@@ -24,7 +24,7 @@ def test_health(client):
     assert response.json() == {
         "status": "ok",
         "embedding_model": "all-MiniLM-L6-v2",
-        "gemini_configured": False,
+        "llm_configured": False,
     }
 
 
@@ -205,62 +205,83 @@ def test_analyze_rejects_oversized_upload(client, monkeypatch):
     assert response.status_code == 413
 
 
-def test_recommendations_without_any_api_key_returns_503(client):
-    response = client.post("/api/v1/recommendations", json={"missing_skills": ["sql"]})
+@pytest.fixture
+def groq_key(monkeypatch):
+    monkeypatch.setenv("GROQ_API_KEY", "test-key")
+    get_settings.cache_clear()
+
+
+def test_health_reports_when_the_llm_is_configured(client, groq_key):
+    assert client.get("/health").json()["llm_configured"] is True
+
+
+@pytest.mark.parametrize(
+    "path, body",
+    [
+        ("/api/v1/coach/learning-path", {"missing_skills": ["SQL"]}),
+        ("/api/v1/coach/rewrite", {"statements": ["Worked on dashboards."]}),
+    ],
+)
+def test_coaching_without_api_key_returns_503(client, path, body):
+    response = client.post(path, json=body)
 
     assert response.status_code == 503
+    assert "GROQ_API_KEY" in response.json()["detail"]
 
 
-def test_recommendations_requires_at_least_one_skill(client):
-    response = client.post(
-        "/api/v1/recommendations",
-        json={"missing_skills": []},
-        headers={"X-Gemini-Api-Key": "key"},
-    )
+@pytest.mark.parametrize(
+    "path, body",
+    [
+        ("/api/v1/coach/learning-path", {"missing_skills": []}),
+        ("/api/v1/coach/rewrite", {"statements": []}),
+    ],
+)
+def test_coaching_requires_at_least_one_item(client, groq_key, path, body):
+    assert client.post(path, json=body).status_code == 422
 
-    assert response.status_code == 422
 
-
-def test_recommendations_uses_client_key_and_fills_defaults(client, monkeypatch):
+def test_learning_path_passes_skills_and_job_title(client, groq_key, monkeypatch):
     calls = []
 
-    def fake_recommendations(skills, api_key):
-        calls.append((skills, api_key))
-        return [{"skill": "sql", "link": "https://example.com"}]
+    def fake_learning_path(skills, job_title):
+        calls.append((skills, job_title))
+        return [
+            {"skill": "SQL", "resource_name": "Course", "project": "Report", "link": "https://x"}
+        ]
 
-    monkeypatch.setattr(main, "get_ai_recommendations", fake_recommendations)
+    monkeypatch.setattr(main, "learning_path", fake_learning_path)
 
     response = client.post(
-        "/api/v1/recommendations",
-        json={"missing_skills": ["sql"]},
-        headers={"X-Gemini-Api-Key": "client-key"},
+        "/api/v1/coach/learning-path",
+        json={"missing_skills": ["SQL"], "job_title": "Data Analyst"},
     )
 
     assert response.status_code == 200
-    assert calls == [(["sql"], "client-key")]
-    assert response.json() == {
-        "recommendations": [
-            {
-                "skill": "sql",
-                "resource_name": "Recommended Course",
-                "project": "No project generated",
-                "link": "https://example.com",
-            }
-        ]
+    assert calls == [(["SQL"], "Data Analyst")]
+    assert response.json()["recommendations"][0]["resource_name"] == "Course"
+
+
+def test_rewrite_returns_before_and_after(client, groq_key, monkeypatch):
+    rewrite = {
+        "original": "Worked on dashboards.",
+        "rewritten": "Built [N] dashboards.",
+        "note": "Added a count",
     }
+    monkeypatch.setattr(main, "rewrite_bullets", lambda statements, job_title: [rewrite])
+
+    response = client.post("/api/v1/coach/rewrite", json={"statements": ["Worked on dashboards."]})
+
+    assert response.status_code == 200
+    assert response.json() == {"rewrites": [rewrite]}
 
 
-def test_recommendations_upstream_failure_returns_502(client, monkeypatch):
-    def failing(skills, api_key):
-        raise RecommendationError("gemini-x: HTTP 429")
+def test_llm_failure_returns_502(client, groq_key, monkeypatch):
+    def failing(skills, job_title):
+        raise LLMError("some-model: HTTP 429")
 
-    monkeypatch.setattr(main, "get_ai_recommendations", failing)
+    monkeypatch.setattr(main, "learning_path", failing)
 
-    response = client.post(
-        "/api/v1/recommendations",
-        json={"missing_skills": ["sql"]},
-        headers={"X-Gemini-Api-Key": "key"},
-    )
+    response = client.post("/api/v1/coach/learning-path", json={"missing_skills": ["SQL"]})
 
     assert response.status_code == 502
     assert "HTTP 429" in response.json()["detail"]

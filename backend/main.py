@@ -5,19 +5,23 @@ from dataclasses import asdict
 from functools import lru_cache
 from typing import Annotated
 
-from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Response, UploadFile
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Response, UploadFile
 
 from backend.schemas import (
     AnalysisResponse,
     HealthResponse,
     HistoryResponse,
+    LearningPathRequest,
+    LearningPathResponse,
     RankingResponse,
-    RecommendationRequest,
-    RecommendationResponse,
+    RewriteRequest,
+    RewriteResponse,
 )
 from backend.storage import HistoryStore
 from core.ats import check_resume
+from core.coaching import learning_path, rewrite_bullets
 from core.config import Settings, get_settings
+from core.llm import LLMError
 from core.logging_config import configure_logging
 from core.parsing import (
     ParsedDocument,
@@ -25,7 +29,6 @@ from core.parsing import (
     UnsupportedFileTypeError,
     extract_document,
 )
-from core.recommendations import RecommendationError, get_ai_recommendations
 from core.report import build_report
 from core.scoring import ResumeAnalyzer, get_analyzer
 
@@ -46,7 +49,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Smart Resume Analyzer API",
-    description="Scores a resume against a job description and suggests how to close skill gaps.",
+    description="Scores resumes against job descriptions and explains the result.",
     version="2.0.0",
     lifespan=lifespan,
 )
@@ -93,7 +96,7 @@ def health(settings: Annotated[Settings, Depends(get_settings)]):
     return HealthResponse(
         status="ok",
         embedding_model=settings.embedding_model,
-        gemini_configured=bool(settings.gemini_api_key),
+        llm_configured=bool(settings.groq_api_key),
     )
 
 
@@ -193,22 +196,23 @@ def delete_history_item(analysis_id: int, history: Annotated[HistoryStore, Depen
         raise HTTPException(404, f"No analysis with id {analysis_id}.")
 
 
-@app.post("/api/v1/recommendations", response_model=RecommendationResponse)
-def recommendations(
-    request: RecommendationRequest,
-    settings: Annotated[Settings, Depends(get_settings)],
-    x_gemini_api_key: Annotated[str | None, Header()] = None,
-):
-    # A key sent by the client takes priority over the one configured on the server
-    api_key = x_gemini_api_key or settings.gemini_api_key
-    if not api_key:
-        raise HTTPException(
-            503,
-            "No Gemini API key. Set GEMINI_API_KEY on the server or send X-Gemini-Api-Key.",
-        )
-
+def _coach(advise, *args):
+    """Runs an LLM-backed function, translating its failures into HTTP errors."""
+    if not get_settings().groq_api_key:
+        raise HTTPException(503, "AI coaching is unavailable: GROQ_API_KEY is not set.")
     try:
-        recs = get_ai_recommendations(request.missing_skills, api_key)
-    except RecommendationError as e:
-        raise HTTPException(502, f"Gemini request failed ({e}).") from e
-    return {"recommendations": recs}
+        return advise(*args)
+    except LLMError as e:
+        raise HTTPException(502, f"The AI service did not respond ({e}).") from e
+
+
+@app.post("/api/v1/coach/learning-path", response_model=LearningPathResponse)
+def coach_learning_path(request: LearningPathRequest):
+    """A learning resource and a project idea for each of the top missing skills."""
+    return {"recommendations": _coach(learning_path, request.missing_skills, request.job_title)}
+
+
+@app.post("/api/v1/coach/rewrite", response_model=RewriteResponse)
+def coach_rewrite(request: RewriteRequest):
+    """Stronger wordings of resume statements, without adding facts that were not there."""
+    return {"rewrites": _coach(rewrite_bullets, request.statements, request.job_title)}

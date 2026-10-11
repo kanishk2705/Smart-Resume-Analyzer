@@ -10,6 +10,7 @@ COPY requirements/frontend.txt requirements/frontend.txt
 RUN pip install --no-cache-dir -r requirements/frontend.txt
 
 COPY frontend/ .
+COPY .streamlit/ .streamlit/
 
 RUN useradd --create-home appuser
 USER appuser

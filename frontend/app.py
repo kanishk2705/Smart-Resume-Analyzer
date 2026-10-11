@@ -12,28 +12,40 @@ STATUS_ICONS = {
     "pass": "✅", "warn": "⚠️", "fail": "❌",
 }
 
+# ATS checks whose examples are statements the AI coach can reword
+REWRITABLE_CHECKS = ("quantified", "verbs", "bullet_length", "pronouns")
+
 st.set_page_config(page_title="Smart Resume Analyzer", layout="wide")
 st.title("🤖 Smart Resume Analyzer")
 
 # --- 1. SESSION STATE ---
 if "analysis_results" not in st.session_state:
     st.session_state.analysis_results = None
+    # A link ending in ?analysis=<id> opens that saved analysis
+    linked_id = st.query_params.get("analysis", "")
+    if linked_id.isdigit():
+        try:
+            st.session_state.analysis_results = api_client.get_analysis(int(linked_id))
+        except BackendError:
+            pass  # A stale link just opens the app as normal
 if "ranking_results" not in st.session_state:
     st.session_state.ranking_results = None
 if "reports" not in st.session_state:
     st.session_state.reports = {}  # analysis id -> PDF bytes
+if "coaching" not in st.session_state:
+    st.session_state.coaching = {}  # (analysis id, kind) -> AI coach answer
 
 # --- 2. SIDEBAR ---
-gemini_configured = False
+llm_configured = False
 with st.sidebar:
     try:
         health = api_client.get_health()
-        gemini_configured = health["gemini_configured"]
+        llm_configured = health["llm_configured"]
         st.success("Backend connected")
-        st.info(f"AI Logic: SBERT ({health['embedding_model']}) + Gemini")
+        st.caption(f"Embedding model: {health['embedding_model']}")
+        st.caption("AI coach: " + ("available" if llm_configured else "off (no GROQ_API_KEY)"))
     except BackendError as e:
         st.error(str(e))
-
 
 def match_band(score: float) -> None:
     if score >= 75:
@@ -69,7 +81,6 @@ def show_score(results: dict) -> None:
 
 
 def show_skills(results: dict) -> None:
-    st.subheader("🧩 Skills")
     skills = results["skills"]
     if skills:
         for category in dict.fromkeys(s["category"] for s in skills):
@@ -89,7 +100,6 @@ def show_skills(results: dict) -> None:
 
 
 def show_requirements(results: dict) -> None:
-    st.subheader("🔍 Requirement Coverage")
     st.caption("Each job requirement, with the resume sentence that supports it best.")
     st.dataframe(
         [
@@ -114,7 +124,6 @@ def show_requirements(results: dict) -> None:
 
 
 def show_ats(results: dict) -> None:
-    st.subheader("📋 ATS Format Check")
     st.caption("Whether an applicant tracking system can read this resume. Independent of the job.")
     for check in results["ats"]["checks"]:
         st.markdown(f"{STATUS_ICONS[check['status']]} **{check['label']}** — {check['message']}")
@@ -124,44 +133,90 @@ def show_ats(results: dict) -> None:
                     st.markdown(f"- {example}")
 
 
+def coached(results: dict, kind: str, label: str, key: str, fetch) -> list[dict] | None:
+    """A button that asks the AI coach for advice and remembers the answer for this analysis."""
+    cache_key = (results["id"], kind)
+    if st.button(label, key=f"{key}_{kind}"):
+        with st.spinner("Consulting AI coach..."):
+            try:
+                st.session_state.coaching[cache_key] = fetch()
+            except BackendError as e:
+                st.error(str(e))
+    return st.session_state.coaching.get(cache_key)
+
+
 def show_learning_path(results: dict, key: str) -> None:
-    st.subheader("🎓 AI Personal Growth Plan")
+    st.subheader("🎓 Learning Path")
     missing_skills = [s["name"] for s in results["skills"] if s["status"] == "missing"]
     if not missing_skills:
         st.success("No missing skills to plan for.")
         return
 
-    # API Key Logic (configured on the backend, or entered here)
-    api_key = None
-    if not gemini_configured:
-        api_key = st.text_input("Enter Gemini API Key:", type="password", key=f"{key}_api_key")
+    st.caption("A resource and a project idea for the skills this job asks for and you lack.")
+    recs = coached(
+        results,
+        "learning_path",
+        "Generate Learning Path",
+        key,
+        lambda: api_client.get_learning_path(missing_skills, results["job_title"]),
+    )
+    if recs:
+        cols = st.columns(3)
+        for i, item in enumerate(recs):
+            with cols[i % 3]:
+                with st.container(border=True):
+                    st.markdown(f"**📘 Learn {item['skill']}**")
+                    st.caption(f"🔗 [{item['resource_name']}]({item['link']})")
+                    st.success(f"🛠 **Project:** {item['project']}")
+    elif recs is not None:
+        st.warning("No recommendations returned.")
 
-    if st.button("Generate Learning Path", key=f"{key}_learning_path"):
-        if not gemini_configured and not api_key:
-            st.error("Please enter an API Key.")
-            return
 
-        status_msg = st.empty()
-        status_msg.info("⏳ Consulting AI Coach... Please wait.")
-        try:
-            recs = api_client.get_recommendations(missing_skills, api_key)
-        except BackendError as e:
-            recs = None
-            st.error(str(e))
-        finally:
-            status_msg.empty()
+def flagged_statements(results: dict) -> list[str]:
+    """Resume statements that an ATS check quoted as needing work, without repeats."""
+    examples = [
+        example
+        for check in results["ats"]["checks"]
+        if check["key"] in REWRITABLE_CHECKS
+        for example in check["examples"]
+    ]
+    return list(dict.fromkeys(examples))
 
-        if recs:
-            cols = st.columns(3)
-            for i, item in enumerate(recs):
-                with cols[i % 3]:
-                    with st.container(border=True):
-                        st.markdown(f"**📘 Learn {item['skill']}**")
-                        st.caption(f"🔗 [{item['resource_name']}]({item['link']})")
-                        st.success(f"🛠 **Project:** {item['project']}")
-        elif recs is not None:
-            st.warning("No recommendations returned.")
 
+def show_rewrites(results: dict, key: str) -> None:
+    st.subheader("✍️ Statement Rewrites")
+    statements = flagged_statements(results)
+    if not statements:
+        st.success("The ATS check flagged no statements to rewrite.")
+        return
+
+    st.caption(
+        "Stronger wordings for statements the ATS check flagged. Text in [brackets] is a "
+        "placeholder for a real figure; the coach is told never to invent one."
+    )
+    rewrites = coached(
+        results,
+        "rewrites",
+        "Suggest Rewrites",
+        key,
+        lambda: api_client.get_rewrites(statements, results["job_title"]),
+    )
+    for rewrite in rewrites or []:
+        with st.container(border=True):
+            st.markdown(f"**Before:** {rewrite['original']}")
+            st.markdown(f"**After:** {rewrite['rewritten']}")
+            st.caption(rewrite["note"])
+    if rewrites is not None and not rewrites:
+        st.warning("No rewrites returned.")
+
+
+def show_coach(results: dict, key: str) -> None:
+    if not llm_configured:
+        st.info("The AI coach is off. Set GROQ_API_KEY on the backend to enable it.")
+        return
+    show_learning_path(results, key)
+    st.divider()
+    show_rewrites(results, key)
 
 def show_report_download(results: dict, key: str) -> None:
     analysis_id = results["id"]
@@ -186,15 +241,18 @@ def show_analysis(results: dict, key: str) -> None:
     st.caption(f"{results['resume_filename']} · {results['job_title']}")
     show_score(results)
     show_report_download(results, key)
-    st.divider()
-    show_skills(results)
-    st.divider()
-    show_requirements(results)
-    st.divider()
-    show_ats(results)
-    st.divider()
-    show_learning_path(results, key)
 
+    tab_skills, tab_requirements, tab_ats, tab_coach = st.tabs(
+        ["🧩 Skills", "🔍 Requirements", "📋 ATS check", "🎓 AI coach"]
+    )
+    with tab_skills:
+        show_skills(results)
+    with tab_requirements:
+        show_requirements(results)
+    with tab_ats:
+        show_ats(results)
+    with tab_coach:
+        show_coach(results, key)
 
 def ranking_csv(candidates: list[dict]) -> str:
     buffer = io.StringIO()

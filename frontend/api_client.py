@@ -68,12 +68,19 @@ def get_report(analysis_id: int) -> bytes:
     return _request("GET", f"/api/v1/history/{analysis_id}/report", timeout=30).content
 
 
-def get_recommendations(missing_skills: list[str], api_key: str | None = None) -> list[dict]:
-    headers = {"X-Gemini-Api-Key": api_key} if api_key else {}
+def get_learning_path(missing_skills: list[str], job_title: str) -> list[dict]:
     return _request(
         "POST",
-        "/api/v1/recommendations",
+        "/api/v1/coach/learning-path",
         timeout=120,
-        json={"missing_skills": missing_skills},
-        headers=headers,
+        json={"missing_skills": missing_skills, "job_title": job_title},
     ).json()["recommendations"]
+
+
+def get_rewrites(statements: list[str], job_title: str) -> list[dict]:
+    return _request(
+        "POST",
+        "/api/v1/coach/rewrite",
+        timeout=120,
+        json={"statements": statements, "job_title": job_title},
+    ).json()["rewrites"]

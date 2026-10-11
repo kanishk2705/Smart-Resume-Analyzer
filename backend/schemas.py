@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 class HealthResponse(BaseModel):
     status: str
     embedding_model: str
-    gemini_configured: bool
+    llm_configured: bool = Field(description="Whether the AI coaching endpoints are available")
 
 
 class ScoredSentence(BaseModel):
@@ -100,16 +100,32 @@ class RankingResponse(BaseModel):
     failed: list[FailedResume] = Field(description="Files that could not be read")
 
 
-class RecommendationRequest(BaseModel):
+class LearningPathRequest(BaseModel):
     missing_skills: list[str] = Field(min_length=1)
+    job_title: str = "the target role"
 
 
 class Recommendation(BaseModel):
-    skill: str = ""
-    resource_name: str = "Recommended Course"
-    project: str = "No project generated"
-    link: str = "#"
+    skill: str
+    resource_name: str
+    project: str
+    link: str = Field(description="A web search for the resource, not an LLM-written URL")
 
 
-class RecommendationResponse(BaseModel):
+class LearningPathResponse(BaseModel):
     recommendations: list[Recommendation]
+
+
+class RewriteRequest(BaseModel):
+    statements: list[str] = Field(min_length=1, description="Resume statements to improve")
+    job_title: str = "the target role"
+
+
+class Rewrite(BaseModel):
+    original: str
+    rewritten: str = Field(description="May contain [placeholders] for the candidate to fill")
+    note: str
+
+
+class RewriteResponse(BaseModel):
+    rewrites: list[Rewrite]

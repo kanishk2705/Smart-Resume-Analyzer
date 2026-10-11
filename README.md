@@ -5,7 +5,7 @@
 Scores a resume against a job description, explains the score requirement by requirement,
 shows which skills are matched or missing, and uses an LLM to suggest how to close the gaps.
 
-![Project Demo](assets/phase_4_demo.png)
+![The analysis view: overall score, score breakdown and skills by category](assets/demo.png)
 
 ## Why
 
@@ -32,8 +32,9 @@ compares the two documents by meaning as well as by keyword.
 - **History** — every analysis is saved to SQLite, with the change in score since the
   previous analysis for the same job, so you can see whether an edit helped.
 - **PDF report** — any analysis can be downloaded as a formatted report.
-- **AI learning path** — Google Gemini suggests a learning resource and a project idea for
-  the top missing skills.
+- **AI coach** — an LLM (served by Groq) suggests a learning resource and a project idea
+  for each missing skill, and rewrites the statements the ATS check flagged. It is told
+  never to invent facts, and leaves `[placeholders]` where a real figure belongs.
 - **REST API** — everything the UI does is available over HTTP, with interactive docs.
 
 ## How scoring works
@@ -67,7 +68,7 @@ Raw cosine similarities are stretched onto 0–100 between a floor (0.15) and a 
 
 ```text
 ┌──────────────────┐   HTTP    ┌────────────────────┐   HTTPS   ┌────────────┐
-│ Streamlit UI     │ ────────▶ │ FastAPI backend    │ ────────▶ │ Gemini API │
+│ Streamlit UI     │ ────────▶ │ FastAPI backend    │ ────────▶ │ Groq API   │
 │ frontend/ :8501  │           │ backend/     :8000 │           └────────────┘
 └──────────────────┘           │   └─ core/         │
                                │      parsing       │
@@ -92,7 +93,8 @@ framework code, so it can be tested and reused on its own.
 │   ├── ats.py             # Format checks on the resume itself
 │   ├── report.py          # PDF report
 │   ├── data/skills.json   # Skill taxonomy
-│   └── recommendations.py # Gemini client with model fallback
+│   ├── llm.py             # Groq client with model fallback
+│   └── coaching.py        # Learning path and statement rewrites
 ├── backend/               # FastAPI service
 │   ├── main.py            # Routes and error handling
 │   ├── storage.py         # Analysis history (SQLite)
@@ -118,8 +120,8 @@ Then open <http://localhost:8501>. The API docs are at <http://localhost:8000/do
 
 The first build downloads PyTorch and the embedding model, so it takes a few minutes.
 
-To enable the AI learning path, copy `.env.example` to `.env` and set `GEMINI_API_KEY`
-before starting. Without it, the UI asks for a key when you use that feature.
+To enable the AI coach, copy `.env.example` to `.env` and set `GROQ_API_KEY` before
+starting. Without a key everything else works and the coach tab says it is off.
 
 ## Run locally
 
@@ -149,7 +151,8 @@ environment variable to point it elsewhere.
 | GET    | `/api/v1/history/{id}`        | One past analysis in full                            |
 | GET    | `/api/v1/history/{id}/report` | That analysis as a PDF                               |
 | DELETE | `/api/v1/history/{id}`        | Delete a past analysis                               |
-| POST   | `/api/v1/recommendations`     | Learning resources and projects for missing skills   |
+| POST   | `/api/v1/coach/learning-path` | Learning resources and projects for missing skills   |
+| POST   | `/api/v1/coach/rewrite`       | Stronger wordings for resume statements              |
 
 ```bash
 curl -X POST http://localhost:8000/api/v1/analyze \
@@ -198,8 +201,8 @@ All settings are optional and read from environment variables or a `.env` file.
 
 | Variable          | Default                      | Purpose                                      |
 | ----------------- | ---------------------------- | -------------------------------------------- |
-| `GEMINI_API_KEY`  | *(empty)*                    | Enables the AI learning path                 |
-| `GEMINI_MODELS`   | see `.env.example`           | Models to try, in order                      |
+| `GROQ_API_KEY`    | *(empty)*                    | Enables the AI coach                         |
+| `GROQ_MODELS`     | see `.env.example`           | Models to try, in order                      |
 | `EMBEDDING_MODEL` | `all-MiniLM-L6-v2`           | Sentence-transformers model used for scoring |
 | `MAX_UPLOAD_MB`   | `5`                          | Largest accepted resume file                 |
 | `MAX_BATCH_FILES` | `25`                         | Most resumes ranked in one request           |
@@ -241,25 +244,25 @@ pytest                    # all tests, including one that loads the real model
 - **There are no user accounts.** Anyone who can reach the app sees the whole history.
   The history holds analysis results (including sentences quoted from resumes), not the
   uploaded files. Run it locally or behind your own access control.
+- **The AI coach sends text to a third party.** Using it sends the job title, the missing
+  skill names and the flagged resume statements to Groq. Nothing is sent otherwise.
+  Its rewrites are suggestions and can still be wrong; check them before using them.
 - Multi-column PDF layouts can be extracted out of reading order, and scanned
   (image-only) PDFs are not supported.
 - English only.
 
 ## Roadmap
 
-- [x] Phase 1: NLP keyword matching (NLTK)
-- [x] Phase 2: Semantic matching and hero sentences (SBERT)
-- [x] Phase 3: Docker
-- [x] Phase 4: LLM learning paths (Gemini)
-- [x] v2, step 1: FastAPI backend, separate frontend, tests, CI, pinned dependencies
-- [x] v2, step 2: Section-aware parsing, sentence-level scoring, score breakdown, skill
-      taxonomy (replaces the Phase 1 keyword matcher)
-- [x] v2, step 3: Recruiter mode, ATS format checker, analysis history, PDF report
 - [ ] Evaluate the score against labelled resume–job pairs and fit the weights to data
 - [ ] Hosted demo
+- [ ] User accounts, so the history is private to each user
 
-Earlier phases: [1](assets/phase_1_demo.png) · [2](assets/phase_2_demo.png) ·
-[3](assets/phase_3_demo.png) · [4](assets/phase_4_demo.png)
+## Project history
+
+Version 1 was a single Streamlit script built in four phases: NLTK keyword matching, a
+whole-document SBERT similarity score, a Docker image, and LLM learning paths. Version 2
+rebuilt it as the service described above; the keyword matcher was replaced by the skill
+taxonomy and the single similarity score by the four-component breakdown.
 
 ---
 

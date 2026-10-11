@@ -37,15 +37,16 @@ class Settings(BaseSettings):
     # SQLite file holding past analyses
     history_db: str = "data/history.db"
 
-    # Gemini (recommendations)
-    gemini_api_key: str = ""
-    gemini_models: str = "gemini-2.5-flash,gemini-2.0-flash-exp,gemini-1.5-flash"
-    gemini_timeout_seconds: float = 30.0
-    max_recommendation_skills: int = 3
+    # Groq (AI coaching: learning path and bullet rewrites)
+    groq_api_key: str = ""
+    groq_models: str = "openai/gpt-oss-120b,openai/gpt-oss-20b"
+    llm_timeout_seconds: float = 60.0
+    # Most skills or statements sent to the LLM in one request
+    max_coached_items: int = 5
 
     @property
-    def gemini_model_list(self) -> list[str]:
-        return [m.strip() for m in self.gemini_models.split(",") if m.strip()]
+    def groq_model_list(self) -> list[str]:
+        return [m.strip() for m in self.groq_models.split(",") if m.strip()]
 
     @property
     def max_upload_bytes(self) -> int:

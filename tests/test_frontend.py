@@ -69,20 +69,15 @@ RANKING = {
 }
 
 
-def connect(monkeypatch, gemini_configured=True, history=()):
+def connect(monkeypatch, llm_configured=True, history=()):
     """Stands in for a healthy backend."""
     monkeypatch.setattr(
         api_client,
         "get_health",
-        lambda: {
-            "status": "ok",
-            "embedding_model": "test-model",
-            "gemini_configured": gemini_configured,
-        },
+        lambda: {"status": "ok", "embedding_model": "test-model", "llm_configured": llm_configured},
     )
     monkeypatch.setattr(api_client, "get_history", lambda: list(history))
     monkeypatch.setattr(api_client, "get_report", lambda analysis_id: b"%PDF-fake")
-
 
 def run_with_analysis(analysis=ANALYSIS):
     app = AppTest.from_file(APP_PATH)
@@ -121,8 +116,6 @@ def test_app_displays_score_breakdown_skills_and_evidence(monkeypatch):
     assert "❌ `Kubernetes`" in text
     assert "🟡 `PostgreSQL` (you have MySQL)" in text
     assert any("I deploy Python services with Docker." in info.value for info in app.info)
-    # The key is configured on the backend, so the user is not asked for one
-    assert len(app.text_input) == 0
 
 
 def test_app_displays_ats_checks_with_examples(monkeypatch):
@@ -135,31 +128,69 @@ def test_app_displays_ats_checks_with_examples(monkeypatch):
     assert "- I deploy Python services with Docker." in text
 
 
-def test_app_asks_for_api_key_when_backend_has_none(monkeypatch):
-    connect(monkeypatch, gemini_configured=False)
+def click(app, label):
+    return next(b for b in app.button if b.label == label).click().run()
+
+
+def test_ai_coach_is_hidden_when_the_backend_has_no_llm(monkeypatch):
+    connect(monkeypatch, llm_configured=False)
 
     app = run_with_analysis()
 
-    assert len(app.text_input) == 1
+    assert not app.exception
+    assert any("GROQ_API_KEY" in info.value for info in app.info)
+    assert not any(b.label == "Generate Learning Path" for b in app.button)
 
 
-def test_learning_path_requests_only_missing_skills(monkeypatch):
+def test_learning_path_requests_only_missing_skills_for_this_job(monkeypatch):
     requested = []
 
-    def fake_recommendations(skills, api_key=None):
-        requested.append(skills)
+    def fake_learning_path(skills, job_title):
+        requested.append((skills, job_title))
         return [{"skill": "Kubernetes", "resource_name": "Course", "project": "Deploy an app",
                  "link": "https://example.com"}]
 
     connect(monkeypatch)
-    monkeypatch.setattr(api_client, "get_recommendations", fake_recommendations)
+    monkeypatch.setattr(api_client, "get_learning_path", fake_learning_path)
 
-    app = run_with_analysis()
-    next(b for b in app.button if b.label == "Generate Learning Path").click().run()
+    app = click(run_with_analysis(), "Generate Learning Path")
 
     assert not app.exception
-    assert requested == [["Kubernetes"]]
+    assert requested == [(["Kubernetes"], "Platform Engineer")]
     assert "Learn Kubernetes" in markdown_text(app)
+
+
+def test_coach_answers_stay_on_screen_after_another_interaction(monkeypatch):
+    connect(monkeypatch)
+    monkeypatch.setattr(
+        api_client,
+        "get_learning_path",
+        lambda skills, job_title: [{"skill": "Kubernetes", "resource_name": "Course",
+                                    "project": "Deploy an app", "link": "https://example.com"}],
+    )
+    monkeypatch.setattr(api_client, "get_rewrites", lambda statements, job_title: [])
+
+    app = click(click(run_with_analysis(), "Generate Learning Path"), "Suggest Rewrites")
+
+    assert "Learn Kubernetes" in markdown_text(app)
+
+
+def test_rewrites_are_requested_for_statements_the_ats_check_flagged(monkeypatch):
+    requested = []
+
+    def fake_rewrites(statements, job_title):
+        requested.append(statements)
+        return [{"original": statements[0], "rewritten": "Deployed [N] Python services.",
+                 "note": "Dropped the pronoun"}]
+
+    connect(monkeypatch)
+    monkeypatch.setattr(api_client, "get_rewrites", fake_rewrites)
+
+    app = click(run_with_analysis(), "Suggest Rewrites")
+
+    assert not app.exception
+    assert requested == [["I deploy Python services with Docker."]]
+    assert "**After:** Deployed [N] Python services." in markdown_text(app)
 
 
 def test_no_learning_path_when_nothing_is_missing(monkeypatch):
@@ -169,7 +200,6 @@ def test_no_learning_path_when_nothing_is_missing(monkeypatch):
 
     assert not app.exception
     assert not any(b.label == "Generate Learning Path" for b in app.button)
-
 
 def test_ranking_shows_candidates_and_skipped_files(monkeypatch):
     connect(monkeypatch)
@@ -196,14 +226,14 @@ def test_history_lists_analyses_and_opens_one(monkeypatch):
         "#3 · jane_v2.pdf · Platform Engineer",
         "#2 · jane_v1.pdf · Platform Engineer",
     ]
-    next(b for b in app.button if b.label == "Open").click().run()
+    app = click(app, "Open")
 
     assert not app.exception
     assert "62%" in [m.value for m in app.metric]
 
 
 def test_same_analysis_can_be_open_in_two_tabs(monkeypatch):
-    connect(monkeypatch, gemini_configured=False, history=SUMMARIES)
+    connect(monkeypatch, history=SUMMARIES)
     app = AppTest.from_file(APP_PATH)
     app.session_state.analysis_results = ANALYSIS
     app.session_state.history_view = ANALYSIS
@@ -211,7 +241,7 @@ def test_same_analysis_can_be_open_in_two_tabs(monkeypatch):
     app.run()
 
     assert not app.exception
-    assert len(app.text_input) == 2
+    assert sum(b.label == "Generate Learning Path" for b in app.button) == 2
 
 
 def test_history_delete_removes_the_selected_analysis(monkeypatch):
@@ -220,7 +250,36 @@ def test_history_delete_removes_the_selected_analysis(monkeypatch):
     monkeypatch.setattr(api_client, "delete_analysis", deleted.append)
 
     app = AppTest.from_file(APP_PATH).run()
-    next(b for b in app.button if b.label == "Delete").click().run()
+    app = click(app, "Delete")
 
     assert not app.exception
     assert deleted == [3]
+
+
+def test_link_with_analysis_id_opens_that_analysis(monkeypatch):
+    opened = []
+    connect(monkeypatch)
+    monkeypatch.setattr(api_client, "get_analysis", lambda i: opened.append(i) or ANALYSIS)
+    app = AppTest.from_file(APP_PATH)
+    app.query_params["analysis"] = "3"
+
+    app.run()
+
+    assert not app.exception
+    assert opened == [3]
+    assert "62%" in [m.value for m in app.metric]
+
+
+def test_stale_analysis_link_opens_the_app_normally(monkeypatch):
+    def missing(analysis_id):
+        raise BackendError("No analysis with id 99.")
+
+    connect(monkeypatch)
+    monkeypatch.setattr(api_client, "get_analysis", missing)
+    app = AppTest.from_file(APP_PATH)
+    app.query_params["analysis"] = "99"
+
+    app.run()
+
+    assert not app.exception
+    assert len(app.metric) == 0
