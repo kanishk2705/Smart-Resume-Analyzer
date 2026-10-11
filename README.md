@@ -1,125 +1,167 @@
-# 🚀 Smart Resume Analyzer (AI-Powered ATS)
+# Smart Resume Analyzer
 
-# 🚀 Phase 1 (NLP Keyword Matching) ✅
-  
-> *A resume analysis tool that uses Natural Language Processing (NLTK) to clean, lemmatize, and match resumes against Job Descriptions.*
+[![CI](https://github.com/kanishk2705/Smart-Resume-Analyzer/actions/workflows/ci.yml/badge.svg)](https://github.com/kanishk2705/Smart-Resume-Analyzer/actions/workflows/ci.yml)
 
-![Smart Resume Analyzer Demo](assets/phase_1_demo.png)
-
-# 🤖 Phase 2 (Semantic Search & Explainability) ✅
-
-> *A Next-Gen ATS Simulator that uses Deep Learning (SBERT Transformers) to understand the **meaning** of a resume, not just keywords.*
-
-![Phase 2 Analysis Demo](assets/phase_2_demo.png)
-
-# 🐳 Phase 3 (Containerized Microservice) ✅
-  
-> *A Production-Ready ATS Simulator. Containerized with Docker for "Run Anywhere" deployment, featuring Semantic Search and AI-Powered Explainability.*
-
-![Phase 3](assets/phase_3_demo.png)
-
-#  Phase 4 (LLM Integration) ✅  
-
-> *An End-to-End MLOps project that analyzes resumes using Deep Learning (SBERT) and generates personalized upskilling plans using Google Gemini 2.0.*
+Scores a resume against a job description using sentence embeddings, shows which resume
+sentences drove the score, lists terms the resume is missing, and uses an LLM to suggest
+how to close those gaps.
 
 ![Project Demo](assets/phase_4_demo.png)
 
-## 📌 The Problem
-Traditional Applicant Tracking Systems (ATS) are broken. They reject qualified candidates because of simple keyword mismatches (e.g., rejecting "ML Ops" when looking for "DevOps"). 
+## Why
 
-## 📌 Project Overview
+Keyword-based applicant tracking systems reject candidates over wording: a resume that says
+"built dashboards" can miss a job description asking for "data visualization". This project
+compares the two documents by meaning as well as by keyword.
 
-Most ATS (Applicant Tracking Systems) reject qualified candidates because they lack specific keywords.
+## Features
 
-Unlike basic keyword matchers that fail on simple word variations (e.g., "Analyze" vs. "Analysis"), this **Phase 1** implementation integrates an **NLP Pipeline** to normalize text before matching. It identifies the gap between a candidate's resume and the job requirements using mathematical vectorization.
+- **Semantic match score** — cosine similarity between SBERT (`all-MiniLM-L6-v2`) embeddings
+  of the resume and the job description.
+- **Hero sentences** — the three resume sentences most similar to the job description.
+- **Missing keywords** — terms that appear in the job description but not in the resume,
+  after NLTK cleaning and lemmatization.
+- **AI learning path** — Google Gemini suggests a learning resource and a project idea for
+  the top missing skills.
+- **REST API** — everything the UI does is available over HTTP, with interactive docs.
 
-In **Phase 2**, we upgraded from simple keyword matching to **Semantic Understanding**. By integrating **BERT-based Transformers**, this tool now understands that *"Building Dashboards"* is semantically similar to *"Data Visualization"*, identifying qualified candidates even if they don't use the exact phrasing of the Job Description (JD).
+## Architecture
 
-The **Phase 3**, project is an **Engineering-Grade ATS Simulator** that evolves beyond simple scripts. It uses **Deep Learning (Transformers)** to understand the semantic meaning of a resume and is deployed as a **Dockerized Microservice**, ensuring it runs consistently on any machine (Local, AWS, Azure, etc.).
-
-**Phase 4**: Introduced a GenAI-powered feature that identifies candidates’ top three skill gaps and provides relevant online learning resources, going beyond keyword matching and hero sentence suggestions.
-
-## 🛠️ Tech Stack
-* **Core:** Python 3.10, PyTorch (CPU-Optimized).
-* **AI Models:** `sentence-transformers` (SBERT), Google Gemini 2.0 Flash.
-* **Infrastructure:** Docker & Docker Compose (Microservice).
-* **Frontend:** Streamlit (Optimized with Session State & WebSocket fixes).
-* **Resilience:** Custom "No-Library" API Client to handle model versioning and quota management.
-
-## ✨ Key Features
-
-I built an **AI-First ATS** that focuses on *context*, not just keywords.
-
-1.  **Semantic Matching:** Uses **SBERT Transformers** to understand that "Dashboarding" == "Data Visualization".
-2.  **Explainable AI:** Highlights "Hero Sentences" so users know exactly what scored points.
-3.  **🐳 Portable & Scalable:** Fully containerized. No "it works on my machine" issues—just pull the image and run.
-4.  **⚡ Instant Startup:** Uses **Docker Layer Caching** to pre-bake heavy AI models (80MB+) into the image, so the app launches instantly.
-5.  **GenAI Career Coach:** Instead of just saying "You lack SQL", it uses **Gemini 2.0 Flash** to generate a specific **Google Search Link** for the best course and a practical **Project Idea** to fill that gap.
-
-## 📂 Project Structure
 ```text
-resume-analyzer/
-│
-├── src/
-│   ├── parser.py       # Handles PDF/DOCX extraction
-│   ├── cleaner.py      # NLTK Pipeline (Lemmatization & Cleaning)
-│   └── analyzer.py     # Core logic (Cosine Similarity)
-|   └──recommendations.py # Gemini API Integration
-|── Dockerfile          # Container instructions (Multi-layer build)
-├── .dockerignore       # Build context optimization
-├── app.py              # Main Streamlit Interface
-├── requirements.txt    # Dependencies
-└── README.md           # Documentation
+┌──────────────────┐   HTTP    ┌────────────────────┐   HTTPS   ┌────────────┐
+│ Streamlit UI     │ ────────▶ │ FastAPI backend    │ ────────▶ │ Gemini API │
+│ frontend/ :8501  │           │ backend/     :8000 │           └────────────┘
+└──────────────────┘           │   └─ core/         │
+                               │      parsing       │
+                               │      cleaning      │
+                               │      scoring       │
+                               └────────────────────┘
 ```
-## 🚀 How to Run (Docker)
-The app is fully containerized. You don't need to install Python or PyTorch.
 
-1.  **Build the Image**
-    ```bash
-    docker build -t resume-analyzer .
-    ```
+The frontend holds no ML code and talks to the backend only over HTTP. `core/` has no web
+framework code, so it can be tested and reused on its own.
 
-2.  **Run with API Key**
-    *Replace `YOUR_KEY` with your Google Gemini API Key.*
-    ```bash
-    # Windows PowerShell
-    $key = "YOUR_KEY"
-    docker run -p 8501:8501 -e GEMINI_API_KEY="$key" resume-analyzer
-    ```
+```text
+├── core/                  # Analysis logic, independent of any web framework
+│   ├── config.py          # Settings from environment variables / .env
+│   ├── parsing.py         # PDF and DOCX text extraction
+│   ├── cleaning.py        # NLTK pipeline (stopwords, lemmatization)
+│   ├── scoring.py         # Semantic score, hero sentences, keyword gap
+│   └── recommendations.py # Gemini client with model fallback
+├── backend/               # FastAPI service
+│   ├── main.py            # Routes and error handling
+│   ├── schemas.py         # Request / response models
+│   └── Dockerfile
+├── frontend/              # Streamlit client
+│   ├── app.py
+│   ├── api_client.py
+│   └── Dockerfile
+├── tests/                 # pytest suite
+├── requirements/          # Pinned dependencies (backend, frontend, dev)
+├── docker-compose.yml
+└── .github/workflows/     # CI: lint + tests on every push
+```
 
-3. Access App Open your browser to ``` http://localhost:8501 ```
+## Run with Docker
 
-🚀 Option 2: Run Locally
-
-1. Clone the Repository
 ```bash
-git clone https://github.com/kanishk2705/Smart-Resume-Analyzer.git
-cd resume-analyzer
+docker compose up --build
 ```
-2. Install Dependencies
+
+Then open <http://localhost:8501>. The API docs are at <http://localhost:8000/docs>.
+
+The first build downloads PyTorch and the embedding model, so it takes a few minutes.
+
+To enable the AI learning path, copy `.env.example` to `.env` and set `GEMINI_API_KEY`
+before starting. Without it, the UI asks for a key when you use that feature.
+
+## Run locally
+
+Requires Python 3.11 or newer.
+
 ```bash
 pip install -r requirements.txt
+
+# Terminal 1: backend
+uvicorn backend.main:app --reload
+
+# Terminal 2: frontend
+streamlit run frontend/app.py
 ```
-3. Run the Application
+
+The frontend looks for the backend at `http://localhost:8000`. Set the `BACKEND_URL`
+environment variable to point it elsewhere.
+
+## API
+
+| Method | Path                      | Description                                           |
+| ------ | ------------------------- | ----------------------------------------------------- |
+| GET    | `/health`                 | Service status and configuration                      |
+| POST   | `/api/v1/analyze`         | Score a resume (multipart upload) against a JD        |
+| POST   | `/api/v1/recommendations` | Learning resources and projects for missing skills    |
+
 ```bash
-streamlit run app.py
+curl -X POST http://localhost:8000/api/v1/analyze \
+  -F "resume=@resume.pdf" \
+  -F "job_description=We are hiring a data analyst skilled in SQL and Python."
 ```
-4. Usage
+
+```json
+{
+  "match_score": 55.51,
+  "missing_keywords": ["airflow", "aws", "cloud"],
+  "top_sentences": [
+    {"text": "Data analyst with four years of experience building dashboards.", "score": 0.63}
+  ]
+}
+```
+
+## Configuration
+
+All settings are optional and read from environment variables or a `.env` file.
+
+| Variable          | Default                      | Purpose                                      |
+| ----------------- | ---------------------------- | -------------------------------------------- |
+| `GEMINI_API_KEY`  | *(empty)*                    | Enables the AI learning path                 |
+| `GEMINI_MODELS`   | see `.env.example`           | Models to try, in order                      |
+| `EMBEDDING_MODEL` | `all-MiniLM-L6-v2`           | Sentence-transformers model used for scoring |
+| `MAX_UPLOAD_MB`   | `5`                          | Largest accepted resume file                 |
+| `LOG_LEVEL`       | `INFO`                       | Backend log verbosity                        |
+| `BACKEND_URL`     | `http://localhost:8000`      | Where the frontend finds the API             |
+
+## Development
+
 ```bash
-    . Upload your Resume (PDF or DOCX).
-    . Paste the Job Description.
-    . Click "Analyze" to see your score and missing keywords.
+pip install -r requirements/dev.txt
+
+ruff check .              # lint
+pytest -m "not slow"      # fast tests, no model download
+pytest                    # all tests, including one that loads the real model
 ```
-🗺️ Engineering Roadmap
 
-This project follows an iterative engineering path, moving from basic scripts to a production-grade AI application.
+## Known limitations
 
-[x] Phase 1: NLP-Enhanced Matcher - Implemented NLTK pipeline for robust keyword matching.
+- The embedding model reads at most 256 tokens, so the overall score reflects only the
+  first part of a long resume.
+- The match score is a raw cosine similarity, not a calibrated probability.
+- Text cleaning strips digits and symbols, so skills such as `C++` or `S3` are not
+  matched correctly.
+- Missing keywords are frequent word pairs from the job description, not verified skills.
+- Scanned (image-only) PDFs are not supported.
 
-[x] Phase 2: The Intelligence Layer - Integrating BERT/SBERT Transformers for Semantic Context.
+## Roadmap
 
-[x] Phase 3: DevOps & Scalability - Dockerizing the application for portable deployment.
+- [x] Phase 1: NLP keyword matching (NLTK)
+- [x] Phase 2: Semantic matching and hero sentences (SBERT)
+- [x] Phase 3: Docker
+- [x] Phase 4: LLM learning paths (Gemini)
+- [x] v2, step 1: FastAPI backend, separate frontend, tests, CI, pinned dependencies
+- [ ] v2, step 2: Section-aware parsing, chunked scoring, score breakdown, skill extraction
+- [ ] v2, step 3: Recruiter mode, ATS format checker, analysis history, PDF report
 
-[x] Phase 4: GenAI Mentor - Using LLMs (Gemini) to generate custom learning paths.
+Earlier phases: [1](assets/phase_1_demo.png) · [2](assets/phase_2_demo.png) ·
+[3](assets/phase_3_demo.png) · [4](assets/phase_4_demo.png)
 
-``` Built by A C KANISHK as part of an end-to-end Machine Learning Engineering study. ```
+---
+
+Built by A C Kanishk.

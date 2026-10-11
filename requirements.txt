@@ -1,9 +1,4 @@
-streamlit
-pandas
-scikit-learn
-pypdf
-python-docx
-nltk
-sentence-transformers
-torch --index-url https://download.pytorch.org/whl/cpu
-requests
+# Everything needed to run the backend and frontend locally.
+# For tests and linting, use requirements/dev.txt instead.
+-r requirements/backend.txt
+-r requirements/frontend.txt
