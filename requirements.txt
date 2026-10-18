@@ -1,0 +1,4 @@
+# Everything needed to run the backend and frontend locally.
+# For tests and linting, use requirements/dev.txt instead.
+-r requirements/backend.txt
+-r requirements/frontend.txt

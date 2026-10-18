@@ -1,0 +1,7 @@
+# Extra packages for `python -m evaluation.run`; not needed to run the app.
+-r backend.txt
+
+huggingface-hub==0.36.0
+pandas==2.3.3
+scikit-learn==1.8.0
+scipy==1.16.3

@@ -1,0 +1,24 @@
+[project]
+name = "smart-resume-analyzer"
+version = "2.0.0"
+description = "Scores resumes against job descriptions using sentence embeddings."
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = [".", "frontend"]
+markers = ["slow: loads the real embedding model (deselect with -m 'not slow')"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["api_client", "backend", "core", "tests"]
+
+[tool.ruff.lint.per-file-ignores]
+# Environment variables must be set before the app is imported
+"tests/conftest.py" = ["E402"]

@@ -1,0 +1,751 @@
+{
+  "dataset": "cnamuangtoun/resume-job-description-fit",
+  "embedding_model": "all-MiniLM-L6-v2",
+  "train_pairs": 6241,
+  "train_jobs": 280,
+  "test_pairs": 1759,
+  "test_jobs": 71,
+  "test_jobs_ranked": 28,
+  "test_resumes": 477,
+  "test_label_counts": {
+    "No Fit": 857,
+    "Potential Fit": 444,
+    "Good Fit": 458
+  },
+  "shared_resumes": 476,
+  "shared_jobs": 0,
+  "component_coverage": {
+    "skills": "95%",
+    "coverage": "100%",
+    "experience": "98%",
+    "education": "59%"
+  },
+  "ranker_weights": {
+    "statement_mean": 0.373,
+    "pooled_cosine": 0.269,
+    "similarity_mean": -0.221,
+    "coverage_min": -0.196,
+    "coverage_weak_share": -0.182,
+    "coverage_median": 0.166
+  },
+  "validation": {
+    "tfidf": 0.7321,
+    "v1_whole_document": 0.7184,
+    "skills": 0.6456,
+    "coverage": 0.7051,
+    "experience": 0.7,
+    "education": 0.5349,
+    "v2_overall": 0.681,
+    "resume_prior": 0.6513,
+    "components_logistic": 0.7091,
+    "interaction_logistic": 0.7518,
+    "interaction_boosting": 0.749,
+    "interaction_ranker": 0.7298,
+    "embedding_ranker": 0.7518,
+    "interaction_logistic_pair_only": 0.7476
+  },
+  "selected": "interaction_logistic",
+  "test": {
+    "tfidf": {
+      "auc_within_job": {
+        "value": 0.6819,
+        "ci95": [
+          0.6069,
+          0.7535
+        ]
+      },
+      "auc_all_pairs": {
+        "value": 0.5809,
+        "ci95": [
+          0.5512,
+          0.6114
+        ]
+      },
+      "spearman": {
+        "value": 0.1275,
+        "ci95": [
+          0.0845,
+          0.1701
+        ]
+      }
+    },
+    "v1_whole_document": {
+      "auc_within_job": {
+        "value": 0.7065,
+        "ci95": [
+          0.6345,
+          0.7745
+        ]
+      },
+      "auc_all_pairs": {
+        "value": 0.5546,
+        "ci95": [
+          0.5235,
+          0.5833
+        ]
+      },
+      "spearman": {
+        "value": 0.1067,
+        "ci95": [
+          0.0616,
+          0.1485
+        ]
+      }
+    },
+    "skills": {
+      "auc_within_job": {
+        "value": 0.654,
+        "ci95": [
+          0.5849,
+          0.7246
+        ]
+      },
+      "auc_all_pairs": {
+        "value": 0.5011,
+        "ci95": [
+          0.4714,
+          0.5351
+        ]
+      },
+      "spearman": {
+        "value": 0.017,
+        "ci95": [
+          -0.0269,
+          0.0657
+        ]
+      }
+    },
+    "coverage": {
+      "auc_within_job": {
+        "value": 0.666,
+        "ci95": [
+          0.5967,
+          0.7348
+        ]
+      },
+      "auc_all_pairs": {
+        "value": 0.5052,
+        "ci95": [
+          0.4741,
+          0.5408
+        ]
+      },
+      "spearman": {
+        "value": 0.0295,
+        "ci95": [
+          -0.016,
+          0.0787
+        ]
+      }
+    },
+    "experience": {
+      "auc_within_job": {
+        "value": 0.6698,
+        "ci95": [
+          0.607,
+          0.7353
+        ]
+      },
+      "auc_all_pairs": {
+        "value": 0.5902,
+        "ci95": [
+          0.56,
+          0.6209
+        ]
+      },
+      "spearman": {
+        "value": 0.1447,
+        "ci95": [
+          0.1028,
+          0.1892
+        ]
+      }
+    },
+    "education": {
+      "auc_within_job": {
+        "value": 0.5071,
+        "ci95": [
+          0.4643,
+          0.5567
+        ]
+      },
+      "auc_all_pairs": {
+        "value": 0.4659,
+        "ci95": [
+          0.4342,
+          0.4996
+        ]
+      },
+      "spearman": {
+        "value": -0.0461,
+        "ci95": [
+          -0.0924,
+          0.0056
+        ]
+      }
+    },
+    "v2_overall": {
+      "auc_within_job": {
+        "value": 0.6736,
+        "ci95": [
+          0.6058,
+          0.7419
+        ]
+      },
+      "auc_all_pairs": {
+        "value": 0.5152,
+        "ci95": [
+          0.4855,
+          0.5481
+        ]
+      },
+      "spearman": {
+        "value": 0.0412,
+        "ci95": [
+          -0.0034,
+          0.0894
+        ]
+      }
+    },
+    "resume_prior": {
+      "auc_within_job": {
+        "value": 0.687,
+        "ci95": [
+          0.6057,
+          0.7572
+        ]
+      },
+      "auc_all_pairs": {
+        "value": 0.6974,
+        "ci95": [
+          0.6666,
+          0.7259
+        ]
+      },
+      "spearman": {
+        "value": 0.2911,
+        "ci95": [
+          0.2449,
+          0.3339
+        ]
+      }
+    },
+    "components_logistic": {
+      "auc_within_job": {
+        "value": 0.665,
+        "ci95": [
+          0.6019,
+          0.7314
+        ]
+      },
+      "auc_all_pairs": {
+        "value": 0.5641,
+        "ci95": [
+          0.5325,
+          0.5942
+        ]
+      },
+      "spearman": {
+        "value": 0.1135,
+        "ci95": [
+          0.0679,
+          0.1577
+        ]
+      }
+    },
+    "interaction_logistic": {
+      "auc_within_job": {
+        "value": 0.7396,
+        "ci95": [
+          0.6571,
+          0.8136
+        ]
+      },
+      "auc_all_pairs": {
+        "value": 0.6064,
+        "ci95": [
+          0.5765,
+          0.6376
+        ]
+      },
+      "spearman": {
+        "value": 0.1714,
+        "ci95": [
+          0.1282,
+          0.2157
+        ]
+      }
+    },
+    "interaction_boosting": {
+      "auc_within_job": {
+        "value": 0.7307,
+        "ci95": [
+          0.6695,
+          0.7926
+        ]
+      },
+      "auc_all_pairs": {
+        "value": 0.6482,
+        "ci95": [
+          0.6183,
+          0.6772
+        ]
+      },
+      "spearman": {
+        "value": 0.2177,
+        "ci95": [
+          0.1752,
+          0.2612
+        ]
+      }
+    },
+    "interaction_ranker": {
+      "auc_within_job": {
+        "value": 0.7177,
+        "ci95": [
+          0.6458,
+          0.787
+        ]
+      },
+      "auc_all_pairs": {
+        "value": 0.6075,
+        "ci95": [
+          0.578,
+          0.64
+        ]
+      },
+      "spearman": {
+        "value": 0.1716,
+        "ci95": [
+          0.1286,
+          0.2168
+        ]
+      }
+    },
+    "embedding_ranker": {
+      "auc_within_job": {
+        "value": 0.687,
+        "ci95": [
+          0.5966,
+          0.7736
+        ]
+      },
+      "auc_all_pairs": {
+        "value": 0.6406,
+        "ci95": [
+          0.6096,
+          0.6699
+        ]
+      },
+      "spearman": {
+        "value": 0.2254,
+        "ci95": [
+          0.1795,
+          0.2686
+        ]
+      }
+    },
+    "interaction_logistic_pair_only": {
+      "auc_within_job": {
+        "value": 0.7368,
+        "ci95": [
+          0.6586,
+          0.809
+        ]
+      },
+      "auc_all_pairs": {
+        "value": 0.6001,
+        "ci95": [
+          0.571,
+          0.6317
+        ]
+      },
+      "spearman": {
+        "value": 0.1641,
+        "ci95": [
+          0.12,
+          0.2087
+        ]
+      }
+    },
+    "fine_tuned": {
+      "auc_within_job": {
+        "value": 0.8084,
+        "ci95": [
+          0.7345,
+          0.8791
+        ]
+      },
+      "auc_all_pairs": {
+        "value": 0.7057,
+        "ci95": [
+          0.6786,
+          0.732
+        ]
+      },
+      "spearman": {
+        "value": 0.3289,
+        "ci95": [
+          0.2882,
+          0.3684
+        ]
+      }
+    }
+  },
+  "comparisons": [
+    {
+      "method": "v2_overall",
+      "baseline": "v1_whole_document",
+      "metrics": {
+        "auc_within_job": {
+          "value": -0.0329,
+          "ci95": [
+            -0.0811,
+            0.0124
+          ]
+        },
+        "auc_all_pairs": {
+          "value": -0.0394,
+          "ci95": [
+            -0.0721,
+            -0.0038
+          ]
+        },
+        "spearman": {
+          "value": -0.0656,
+          "ci95": [
+            -0.1118,
+            -0.014
+          ]
+        }
+      }
+    },
+    {
+      "method": "v2_overall",
+      "baseline": "tfidf",
+      "metrics": {
+        "auc_within_job": {
+          "value": -0.0082,
+          "ci95": [
+            -0.0622,
+            0.0443
+          ]
+        },
+        "auc_all_pairs": {
+          "value": -0.0657,
+          "ci95": [
+            -0.0954,
+            -0.0364
+          ]
+        },
+        "spearman": {
+          "value": -0.0863,
+          "ci95": [
+            -0.1308,
+            -0.0432
+          ]
+        }
+      }
+    },
+    {
+      "method": "interaction_logistic",
+      "baseline": "v1_whole_document",
+      "metrics": {
+        "auc_within_job": {
+          "value": 0.033,
+          "ci95": [
+            0.0064,
+            0.0619
+          ]
+        },
+        "auc_all_pairs": {
+          "value": 0.0517,
+          "ci95": [
+            0.0331,
+            0.0723
+          ]
+        },
+        "spearman": {
+          "value": 0.0647,
+          "ci95": [
+            0.0379,
+            0.0947
+          ]
+        }
+      }
+    },
+    {
+      "method": "interaction_logistic",
+      "baseline": "tfidf",
+      "metrics": {
+        "auc_within_job": {
+          "value": 0.0577,
+          "ci95": [
+            0.0122,
+            0.1071
+          ]
+        },
+        "auc_all_pairs": {
+          "value": 0.0254,
+          "ci95": [
+            -0.0021,
+            0.0524
+          ]
+        },
+        "spearman": {
+          "value": 0.0439,
+          "ci95": [
+            0.0047,
+            0.0805
+          ]
+        }
+      }
+    },
+    {
+      "method": "interaction_logistic_pair_only",
+      "baseline": "v1_whole_document",
+      "metrics": {
+        "auc_within_job": {
+          "value": 0.0303,
+          "ci95": [
+            0.0049,
+            0.0582
+          ]
+        },
+        "auc_all_pairs": {
+          "value": 0.0455,
+          "ci95": [
+            0.0265,
+            0.0655
+          ]
+        },
+        "spearman": {
+          "value": 0.0573,
+          "ci95": [
+            0.0302,
+            0.0869
+          ]
+        }
+      }
+    },
+    {
+      "method": "interaction_logistic_pair_only",
+      "baseline": "tfidf",
+      "metrics": {
+        "auc_within_job": {
+          "value": 0.055,
+          "ci95": [
+            0.0121,
+            0.1012
+          ]
+        },
+        "auc_all_pairs": {
+          "value": 0.0192,
+          "ci95": [
+            -0.0076,
+            0.0452
+          ]
+        },
+        "spearman": {
+          "value": 0.0366,
+          "ci95": [
+            -0.0026,
+            0.0731
+          ]
+        }
+      }
+    },
+    {
+      "method": "fine_tuned",
+      "baseline": "v1_whole_document",
+      "metrics": {
+        "auc_within_job": {
+          "value": 0.1019,
+          "ci95": [
+            0.0416,
+            0.1581
+          ]
+        },
+        "auc_all_pairs": {
+          "value": 0.1511,
+          "ci95": [
+            0.119,
+            0.1789
+          ]
+        },
+        "spearman": {
+          "value": 0.2222,
+          "ci95": [
+            0.1782,
+            0.2625
+          ]
+        }
+      }
+    },
+    {
+      "method": "fine_tuned",
+      "baseline": "tfidf",
+      "metrics": {
+        "auc_within_job": {
+          "value": 0.1265,
+          "ci95": [
+            0.0476,
+            0.1941
+          ]
+        },
+        "auc_all_pairs": {
+          "value": 0.1248,
+          "ci95": [
+            0.0917,
+            0.1565
+          ]
+        },
+        "spearman": {
+          "value": 0.2015,
+          "ci95": [
+            0.1531,
+            0.2476
+          ]
+        }
+      }
+    }
+  ],
+  "unseen": {
+    "folds": 4,
+    "strata_ranked": 84,
+    "methods": {
+      "tfidf": {
+        "value": 0.6055,
+        "ci95": [
+          0.539,
+          0.6758
+        ]
+      },
+      "v1_whole_document": {
+        "value": 0.6411,
+        "ci95": [
+          0.5838,
+          0.7015
+        ]
+      },
+      "v2_overall": {
+        "value": 0.6325,
+        "ci95": [
+          0.566,
+          0.7026
+        ]
+      },
+      "interaction_logistic": {
+        "value": 0.6676,
+        "ci95": [
+          0.5983,
+          0.7414
+        ]
+      },
+      "interaction_logistic_pair_only": {
+        "value": 0.667,
+        "ci95": [
+          0.599,
+          0.7403
+        ]
+      },
+      "fine_tuned": {
+        "value": 0.6982,
+        "ci95": [
+          0.6268,
+          0.772
+        ]
+      }
+    },
+    "comparisons": [
+      {
+        "method": "v2_overall",
+        "baseline": "v1_whole_document",
+        "metric": {
+          "value": -0.0086,
+          "ci95": [
+            -0.0673,
+            0.052
+          ]
+        }
+      },
+      {
+        "method": "v2_overall",
+        "baseline": "tfidf",
+        "metric": {
+          "value": 0.027,
+          "ci95": [
+            -0.0278,
+            0.0914
+          ]
+        }
+      },
+      {
+        "method": "interaction_logistic",
+        "baseline": "v1_whole_document",
+        "metric": {
+          "value": 0.0265,
+          "ci95": [
+            -0.0059,
+            0.0639
+          ]
+        }
+      },
+      {
+        "method": "interaction_logistic",
+        "baseline": "tfidf",
+        "metric": {
+          "value": 0.0621,
+          "ci95": [
+            0.0013,
+            0.1266
+          ]
+        }
+      },
+      {
+        "method": "interaction_logistic_pair_only",
+        "baseline": "v1_whole_document",
+        "metric": {
+          "value": 0.0259,
+          "ci95": [
+            -0.0043,
+            0.0624
+          ]
+        }
+      },
+      {
+        "method": "interaction_logistic_pair_only",
+        "baseline": "tfidf",
+        "metric": {
+          "value": 0.0615,
+          "ci95": [
+            0.0048,
+            0.1222
+          ]
+        }
+      },
+      {
+        "method": "fine_tuned",
+        "baseline": "v1_whole_document",
+        "metric": {
+          "value": 0.0571,
+          "ci95": [
+            0.0049,
+            0.1055
+          ]
+        }
+      },
+      {
+        "method": "fine_tuned",
+        "baseline": "tfidf",
+        "metric": {
+          "value": 0.0927,
+          "ci95": [
+            0.0175,
+            0.1725
+          ]
+        }
+      }
+    ]
+  }
+}

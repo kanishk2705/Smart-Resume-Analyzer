@@ -1,0 +1,21 @@
+# Dependencies for Streamlit Community Cloud, which installs the requirements.txt next to
+# the entrypoint. The app's own pins, with PyTorch's CPU-only build: the default Linux build
+# from PyPI bundles several GB of GPU libraries that the free tier has no use for.
+# Choose Python 3.12 in the app's advanced settings; the wheel below is built for it.
+torch @ https://download-r2.pytorch.org/whl/cpu/torch-2.10.0%2Bcpu-cp312-cp312-manylinux_2_28_x86_64.whl ; sys_platform == "linux" and platform_machine == "x86_64" and python_version == "3.12"
+torch==2.10.0 ; sys_platform != "linux" or platform_machine != "x86_64" or python_version != "3.12"
+
+fastapi==0.128.2
+python-multipart==0.0.32
+pydantic==2.12.5
+pydantic-settings==2.15.0
+requests==2.32.5
+httpx==0.28.1
+pypdf==6.5.0
+python-docx==1.2.0
+nltk==3.9.2
+numpy==2.3.4
+sentence-transformers==5.2.0
+transformers==4.57.5
+fpdf2==2.8.9
+streamlit==1.55.0
